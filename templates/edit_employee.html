@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Edit {{ employee.name }} - Attently{% endblock %}
+{% block page_title %}Edit Employee{% endblock %}
+{% block page_subtitle %}{{ employee.name }} · {{ employee.employee_code }}{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <form method="POST" action="{{ url_for('edit_employee', employee_id=employee.id) }}" enctype="multipart/form-data">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-person-vcard me-2 text-primary"></i>Employee Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ form.get('name', employee.name) }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="employee_code" class="form-label">Employee ID <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="employee_code" name="employee_code" value="{{ form.get('employee_code', employee.employee_code) }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ form.get('phone', employee.phone or '') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email <span class="optional-pill">Optional</span></label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ form.get('email', employee.email or '') }}">
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="form-section-title"><span>Photo &amp; Face Recognition</span></div>
+                    <label class="photo-upload w-100" for="photo">
+                        <div class="photo-preview" id="photoPreview">
+                            {% if employee.photo_url %}
+                                <img src="{{ employee.photo_url }}" alt="{{ employee.name }}">
+                            {% else %}
+                                <i class="bi bi-camera"></i>
+                            {% endif %}
+                        </div>
+                        <div class="hint">
+                            <strong>Replace photo (optional)</strong>
+                            <span>Nayi photo upload karenge to face encoding dobara banegi. Warna purani rahegi.</span>
+                        </div>
+                        <input type="file" id="photo" name="photo" accept="image/png,image/jpeg" class="d-none">
+                    </label>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-cash-coin me-2 text-primary"></i>Salary</h5>
+                    <span class="optional-pill">Optional</span>
+                </div>
+                <div class="card-body">
+                    <label for="monthly_salary" class="form-label">Monthly Salary (₹)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₹</span>
+                        <input type="number" min="0" step="0.01" class="form-control" id="monthly_salary" name="monthly_salary"
+                               value="{{ form.get('monthly_salary', employee.monthly_salary or '') }}" placeholder="Leave blank if not applicable">
+                    </div>
+                    <div class="form-text mt-2">Khaali chhodne par report me salary calculate nahi hogi — sirf attendance dikhegi.</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-key me-2 text-primary"></i>Reset Password</h5>
+                    <span class="optional-pill">Optional</span>
+                </div>
+                <div class="card-body">
+                    <label for="password" class="form-label">New Password</label>
+                    <input type="text" class="form-control" id="password" name="password" placeholder="Leave blank to keep current password">
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mb-4">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check2-circle"></i> Save Changes</button>
+                <a href="{{ url_for('employee_details', employee_id=employee.id) }}" class="btn btn-soft">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header"><h5><i class="bi bi-person-badge me-2 text-primary"></i>Profile</h5></div>
+            <div class="card-body text-center">
+                {% if employee.photo_url %}
+                    <img src="{{ employee.photo_url }}" alt="{{ employee.name }}" class="img-fluid rounded-4 mb-3" style="max-height:180px;object-fit:cover;">
+                {% else %}
+                    <span class="avatar-fallback mx-auto mb-3" style="width:84px;height:84px;font-size:2rem;"><i class="bi bi-person-fill"></i></span>
+                {% endif %}
+                <h5 class="mb-1">{{ employee.name }}</h5>
+                <p class="text-muted-2 mb-2">{{ employee.employee_code }}</p>
+                <span class="badge-soft purple"><i class="bi bi-telephone-fill"></i> {{ employee.phone or 'No phone' }}</span>
+            </div>
+        </div>
+
+        <div class="card border-danger-subtle">
+            <div class="card-header"><h5 class="text-danger"><i class="bi bi-exclamation-triangle me-2"></i>Danger Zone</h5></div>
+            <div class="card-body">
+                <p class="text-muted-2">Employee, unki photos, login aur poori attendance history permanently delete ho jayegi.</p>
+                <form method="POST" action="{{ url_for('delete_employee', employee_id=employee.id) }}"
+                      onsubmit="return confirm('{{ employee.name }} ka poora data permanently delete karna hai?');">
+                    <button type="submit" class="btn btn-danger-soft w-100">
+                        <i class="bi bi-trash3"></i> Delete Employee
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const photoInput = document.getElementById('photo');
+    const preview = document.getElementById('photoPreview');
+    if (photoInput && preview) {
+        photoInput.addEventListener('change', () => {
+            const file = photoInput.files && photoInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => { preview.innerHTML = `<img src="${e.target.result}" alt="preview">`; };
+            reader.readAsDataURL(file);
+        });
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+# NOTE (Python 3.12 / Linux):
+# dlib is source-only on PyPI for Linux and has no recent Python wheels, so
+# `pip install face-recognition` tries to compile dlib and fails/hangs.
+# dlib-bin provides the same `dlib` module as a prebuilt wheel. Because
+# face-recognition still declares a dependency on `dlib`, it is installed
+# separately with --no-deps:
+#   ./install.sh
+# or manually:
+#   pip install -r requirements.txt
+#   pip install --no-deps face-recognition face-recognition-models
+Flask
+Flask-SQLAlchemy
+Flask-Login
+Flask-WTF
+boto3
+dlib-bin
+numpy
+Pillow
+python-decouple
+Werkzeug
+email-validator
+psycopg[binary]
+pytz
+setuptools<81

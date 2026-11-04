@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Add Employee - Attently{% endblock %}
+{% block page_title %}Add Employee{% endblock %}
+{% block page_subtitle %}Create an employee profile and their login{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <form method="POST" action="{{ url_for('add_employee') }}" enctype="multipart/form-data">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-person-vcard me-2 text-primary"></i>Employee Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="name" class="form-label">Full Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="name" name="name" value="{{ form.get('name', '') }}" placeholder="e.g. Aarti Sharma" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="employee_code" class="form-label">Employee ID <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="employee_code" name="employee_code" value="{{ form.get('employee_code', '') }}" placeholder="e.g. EMP-001" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
+                            <input type="tel" class="form-control" id="phone" name="phone" value="{{ form.get('phone', '') }}" placeholder="e.g. 9876543210" required>
+                            <div class="form-text">Report me phone number dikhega.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="email" class="form-label">Email <span class="optional-pill">Optional</span></label>
+                            <input type="email" class="form-control" id="email" name="email" value="{{ form.get('email', '') }}" placeholder="name@company.com">
+                        </div>
+                    </div>
+
+                    <div class="divider"></div>
+
+                    <div class="form-section-title">
+                        <span>Photo &amp; Face Recognition</span>
+                    </div>
+                    <label class="photo-upload w-100" for="photo">
+                        <div class="photo-preview" id="photoPreview"><i class="bi bi-camera"></i></div>
+                        <div class="hint">
+                            <strong>Upload a clear front-facing photo *</strong>
+                            <span>JPG or PNG, max {{ max_upload_mb }}MB.{% if r2_enabled %} Photo Cloudflare R2 par store hogi.{% endif %}</span>
+                        </div>
+                        <input type="file" id="photo" name="photo" accept="image/png,image/jpeg" class="d-none" required>
+                    </label>
+                    <div class="form-text mt-2">Chehra saaf dikhna chahiye — isi photo se attendance verify hogi.</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-cash-coin me-2 text-primary"></i>Salary</h5>
+                    <span class="optional-pill">Optional</span>
+                </div>
+                <div class="card-body">
+                    <label for="monthly_salary" class="form-label">Monthly Salary (₹)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">₹</span>
+                        <input type="number" min="0" step="0.01" class="form-control" id="monthly_salary" name="monthly_salary" value="{{ form.get('monthly_salary', '') }}" placeholder="Leave blank if not applicable">
+                    </div>
+                    <div class="form-text mt-2">Agar salary daalenge to report me <strong>monthly ÷ calendar days × present days</strong> se auto-calculate hogi. Khaali chhodna bilkul theek hai.</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="bi bi-shield-lock me-2 text-primary"></i>Employee Login</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control" id="username" name="username" value="{{ form.get('username', '') }}" placeholder="employee id se auto ban jayega">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="text" class="form-control" id="password" name="password" value="{{ form.get('password', '') }}" placeholder="Default: employee123">
+                            <div class="form-text">Khaali chhoda to password <strong>employee123</strong> hoga.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2 mb-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check2-circle"></i> Add Employee
+                </button>
+                <a href="{{ url_for('dashboard') }}" class="btn btn-soft">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body">
+                <div class="page-note">
+                    <i class="bi bi-lightbulb-fill"></i>
+                    <span>
+                        <strong>Kaise kaam karta hai?</strong><br>
+                        Admin employee add karta hai. Employee apne login se sirf apni attendance dekh aur mark sakta hai.
+                    </span>
+                </div>
+                <div class="divider"></div>
+                <ul class="text-muted-2 ps-3 mb-0" style="line-height:1.9;">
+                    <li>Photo se face encoding banti hai.</li>
+                    <li>Photo R2 bucket me save hoti hai.</li>
+                    <li>Salary optional hai.</li>
+                    <li>Phone report me include hota hai.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const photoInput = document.getElementById('photo');
+    const preview = document.getElementById('photoPreview');
+    if (photoInput && preview) {
+        photoInput.addEventListener('change', () => {
+            const file = photoInput.files && photoInput.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => { preview.innerHTML = `<img src="${e.target.result}" alt="preview">`; };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    const code = document.getElementById('employee_code');
+    const username = document.getElementById('username');
+    if (code && username) {
+        code.addEventListener('input', () => {
+            if (!username.dataset.touched) {
+                username.value = code.value.trim().toLowerCase().replace(/\s+/g, '_');
+            }
+        });
+        username.addEventListener('input', () => { username.dataset.touched = '1'; });
+    }
+</script>
+{% endblock %}

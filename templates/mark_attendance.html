@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Mark Attendance - Attently{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+{% block page_subtitle %}Face verify karke apni attendance mark karein{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-camera-fill me-2 text-primary"></i>Camera Check-in</h5>
+                {% if today_record %}
+                    <span class="badge-soft present"><span class="dot"></span> Marked at {{ today_record.time }}</span>
+                {% else %}
+                    <span class="badge-soft amber"><span class="dot"></span> Pending</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <div class="camera-frame mb-3">
+                    <video id="video" autoplay playsinline muted {% if today_record %}style="display:none;"{% endif %}></video>
+                    <div class="camera-placeholder" id="cameraPlaceholder" {% if today_record %}style="display:none;"{% endif %}>
+                        <i class="bi bi-camera-video"></i>
+                        <strong>Camera band hai</strong>
+                        <div>Start camera dabaein ya manual attendance lagayein.</div>
+                    </div>
+                    <div class="scan-line" id="scanLine" {% if today_record %}style="display:none;"{% endif %}></div>
+                </div>
+                <canvas id="canvas" class="d-none"></canvas>
+
+                <div id="statusBox" class="status-banner {{ 'success' if today_record else '' }}">
+                    {% if today_record %}
+                        <i class="bi bi-check-circle-fill"></i>
+                        Aaj ki attendance {{ today_record.time }} par mark hai.
+                    {% else %}
+                        <i class="bi bi-info-circle-fill"></i>
+                        Ready jab aap camera start karenge.
+                    {% endif %}
+                </div>
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    <button type="button" class="btn btn-soft" id="startCamera">
+                        <i class="bi bi-camera-video-fill"></i> Start Camera
+                    </button>
+                    <button type="button" class="btn btn-primary" id="captureBtn" {% if today_record %}disabled{% endif %}>
+                        <i class="bi bi-person-check-fill"></i> Verify &amp; Mark
+                    </button>
+                    <button type="button" class="btn btn-outline-purple" id="manualBtn" {% if today_record %}disabled{% endif %}>
+                        <i class="bi bi-hand-index-thumb-fill"></i> Mark Manually
+                    </button>
+                </div>
+                <div class="form-text mt-2">Face verify me sirf aapka hi chehra match hoga. Doosre ki attendance mark nahi ho sakti.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card mb-4">
+            <div class="card-body text-center">
+                {% if employee.photo_url %}
+                    <img src="{{ employee.photo_url }}" alt="{{ employee.name }}" class="rounded-4 mb-3" style="width:96px;height:96px;object-fit:cover;border:3px solid var(--purple-100);">
+                {% else %}
+                    <span class="avatar-fallback mx-auto mb-3" style="width:96px;height:96px;font-size:2.2rem;"><i class="bi bi-person-fill"></i></span>
+                {% endif %}
+                <h5 class="mb-1">{{ employee.name }}</h5>
+                <p class="text-muted-2 mb-0">{{ employee.employee_code }} · {{ employee.phone or 'No phone' }}</p>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history me-2 text-primary"></i>Recent Attendance</h5>
+            </div>
+            <div class="card-body">
+                <div class="attendance-log">
+                    {% if records %}
+                        {% for record in records %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ record.date }}</strong>
+                                <div class="text-muted-2">{{ record.time or '—' }} · {{ 'Face' if record.method == 'face' else 'Manual' }}</div>
+                            </div>
+                            <span class="badge-soft present"><span class="dot"></span> {{ record.status }}</span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="empty-state py-4">
+                            <i class="bi bi-calendar-x"></i>
+                            <h5>No records yet</h5>
+                            <p>Pehli attendance mark karein.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('canvas');
+    const startBtn = document.getElementById('startCamera');
+    const captureBtn = document.getElementById('captureBtn');
+    const manualBtn = document.getElementById('manualBtn');
+    const statusBox = document.getElementById('statusBox');
+    const placeholder = document.getElementById('cameraPlaceholder');
+    const scanLine = document.getElementById('scanLine');
+    let stream = null;
+    let busy = false;
+
+    function setStatus(message, type) {
+        statusBox.className = 'status-banner' + (type ? ' ' + type : '');
+        const icon = type === 'success' ? 'bi-check-circle-fill'
+                   : type === 'error' ? 'bi-exclamation-octagon-fill'
+                   : 'bi-info-circle-fill';
+        statusBox.innerHTML = `<i class="bi ${icon}"></i> ${message}`;
+    }
+
+    async function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            setStatus('Is browser me camera support nahi hai.', 'error');
+            return;
+        }
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+            video.srcObject = stream;
+            await video.play();
+            placeholder.style.display = 'none';
+            video.style.display = 'block';
+            if (scanLine) scanLine.style.display = 'block';
+            setStatus('Camera ready hai. Ab "Verify & Mark" dabaein.', '');
+        } catch (err) {
+            setStatus('Camera access nahi mila. Permission check karein, ya manual attendance lagayein.', 'error');
+        }
+    }
+
+    async function postAttendance(payload) {
+        if (busy) return;
+        busy = true;
+        captureBtn.disabled = true;
+        manualBtn.disabled = true;
+        try {
+            const res = await fetch('{{ url_for("mark_attendance") }}', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setStatus(data.message, 'success');
+                setTimeout(() => window.location.reload(), 1200);
+            } else {
+                setStatus(data.message, 'error');
+                captureBtn.disabled = false;
+                manualBtn.disabled = false;
+            }
+        } catch (err) {
+            setStatus('Network error. Dobara koshish karein.', 'error');
+            captureBtn.disabled = false;
+            manualBtn.disabled = false;
+        } finally {
+            busy = false;
+        }
+    }
+
+    startBtn.addEventListener('click', startCamera);
+
+    captureBtn.addEventListener('click', async function () {
+        if (!stream) {
+            await startCamera();
+            if (!stream) return;
+        }
+        if (!video.videoWidth || !video.videoHeight) {
+            setStatus('Camera abhi load ho raha hai. Ek second baad try karein.', 'error');
+            return;
+        }
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+        const image = canvas.toDataURL('image/jpeg', 0.9);
+        setStatus('Face verify ho raha hai...', '');
+        await postAttendance({ image: image });
+    });
+
+    manualBtn.addEventListener('click', async function () {
+        if (!confirm('Manual attendance mark karni hai? Face verify nahi hoga.')) return;
+        setStatus('Attendance mark ho rahi hai...', '');
+        await postAttendance({ manual: true });
+    });
+
+    window.addEventListener('beforeunload', () => {
+        if (stream) stream.getTracks().forEach((track) => track.stop());
+    });
+});
+</script>
+{% endblock %}

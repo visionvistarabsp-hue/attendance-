@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block title %}{{ employee.name }} - Attently{% endblock %}
+{% block page_title %}{{ employee.name }}{% endblock %}
+{% block page_subtitle %}{{ employee.employee_code }} · Employee profile &amp; attendance{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-body text-center">
+                {% if employee.photo_url %}
+                    <img src="{{ employee.photo_url }}" alt="{{ employee.name }}" class="img-fluid rounded-4 mb-3" style="max-height:200px;object-fit:cover;border:3px solid var(--purple-100);">
+                {% else %}
+                    <span class="avatar-fallback mx-auto mb-3" style="width:96px;height:96px;font-size:2.4rem;"><i class="bi bi-person-fill"></i></span>
+                {% endif %}
+                <h4 class="mb-1">{{ employee.name }}</h4>
+                <p class="text-muted-2 mb-3">{{ employee.employee_code }}</p>
+                {% if today_record %}
+                    <span class="badge-soft present"><span class="dot"></span> Present today · {{ today_record.time }}</span>
+                {% else %}
+                    <span class="badge-soft absent"><span class="dot"></span> Not marked today</span>
+                {% endif %}
+
+                <div class="divider"></div>
+
+                <div class="text-start">
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-muted-2">Phone</span>
+                        <strong>{{ employee.phone or '—' }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-muted-2">Email</span>
+                        <strong class="text-truncate ms-3">{{ employee.email or '—' }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-muted-2">Monthly salary</span>
+                        <strong>{{ employee.monthly_salary|inr if employee.monthly_salary else 'Not set' }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-muted-2">Present this month</span>
+                        <strong>{{ present_days }}</strong>
+                    </div>
+                </div>
+
+                {% if current_user.is_admin %}
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{{ url_for('edit_employee', employee_id=employee.id) }}" class="btn btn-primary">
+                        <i class="bi bi-pencil-square"></i> Edit Employee
+                    </a>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-soft">Back to Dashboard</a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if salary %}
+        <div class="salary-card">
+            <div class="label">Estimated salary · this month</div>
+            <div class="amount">{{ salary.payable|inr }}</div>
+            <div class="meta">{{ salary.monthly|inr }} ÷ {{ salary.period_days }} days × {{ salary.present_days }} present</div>
+            <div class="breakdown">
+                <div><span>Per day</span><strong>{{ salary.per_day|inr }}</strong></div>
+                <div><span>Present</span><strong>{{ salary.present_days }}</strong></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-clock-history me-2 text-primary"></i>Attendance History</h5>
+                <span class="badge-soft purple">{{ records|length }} records</span>
+            </div>
+            <div class="card-body p-0">
+                {% if records %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr><th>Date</th><th>Time</th><th>Method</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for record in records %}
+                            <tr>
+                                <td><strong>{{ record.date }}</strong></td>
+                                <td>{{ record.time or '—' }}</td>
+                                <td>
+                                    <span class="badge-soft purple">
+                                        <i class="bi {{ 'bi-camera-fill' if record.method == 'face' else 'bi-hand-index-thumb-fill' }}"></i>
+                                        {{ 'Face' if record.method == 'face' else 'Manual' }}
+                                    </span>
+                                </td>
+                                <td><span class="badge-soft present"><span class="dot"></span> {{ record.status }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="bi bi-calendar-x"></i>
+                    <h5>No attendance yet</h5>
+                    <p>Records yahan dikhenge jab employee attendance mark karega.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

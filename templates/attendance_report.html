@@ -1,0 +1,210 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - Attently{% endblock %}
+{% block page_title %}{{ 'Reports & Salary' if is_admin else 'My Report' }}{% endblock %}
+{% block page_subtitle %}{{ start_date }} se {{ end_date }} tak{% endblock %}
+
+{% block content %}
+<form class="filter-bar" method="GET" action="{{ url_for('attendance_report') }}">
+    <div>
+        <label class="form-label" for="start_date">Start Date</label>
+        <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}">
+    </div>
+    <div>
+        <label class="form-label" for="end_date">End Date</label>
+        <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}">
+    </div>
+    {% if is_admin %}
+    <div>
+        <label class="form-label" for="employee_id">Employee</label>
+        <select class="form-select" id="employee_id" name="employee_id">
+            <option value="">All employees</option>
+            {% for employee in employees %}
+                <option value="{{ employee.id }}" {{ 'selected' if filter_employee == (employee.id|string) }}>
+                    {{ employee.name }} ({{ employee.employee_code }})
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+    {% endif %}
+    <div class="filter-actions">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel-fill"></i> Apply</button>
+        <a href="{{ url_for('attendance_report') }}" class="btn btn-soft">Reset</a>
+        <a class="btn btn-outline-purple"
+           href="{{ url_for('download_attendance', start_date=start_date, end_date=end_date, employee_id=filter_employee) }}">
+            <i class="bi bi-download"></i> CSV
+        </a>
+    </div>
+</form>
+
+<div class="stat-grid">
+    <div class="stat-card">
+        <div class="stat-top">
+            <span class="stat-label">{{ 'Employees' if is_admin else 'My Days' }}</span>
+            <span class="icon-bubble"><i class="bi bi-people-fill"></i></span>
+        </div>
+        <div class="stat-value">{{ stats.employees }}</div>
+        <div class="stat-foot">In selected period</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top">
+            <span class="stat-label">Present Days</span>
+            <span class="icon-bubble green"><i class="bi bi-check2-circle"></i></span>
+        </div>
+        <div class="stat-value">{{ stats.present_records }}</div>
+        <div class="stat-foot">Total check-ins</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top">
+            <span class="stat-label">Period Days</span>
+            <span class="icon-bubble amber"><i class="bi bi-calendar3"></i></span>
+        </div>
+        <div class="stat-value">{{ stats.period_days }}</div>
+        <div class="stat-foot">Calendar days in range</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-top">
+            <span class="stat-label">{{ 'Total Payable' if is_admin else 'My Estimate' }}</span>
+            <span class="icon-bubble"><i class="bi bi-cash-stack"></i></span>
+        </div>
+        <div class="stat-value" style="font-size:1.5rem;">
+            {% if is_admin %}
+                {{ stats.payable_total|inr }}
+            {% elif salary_rows and salary_rows[0].salary %}
+                {{ salary_rows[0].salary.payable|inr }}
+            {% else %}
+                —
+            {% endif %}
+        </div>
+        <div class="stat-foot">
+            {% if is_admin %}Only employees with salary set{% else %}Auto-calculated if salary set{% endif %}
+        </div>
+    </div>
+</div>
+
+{% if is_admin %}
+<div class="card">
+    <div class="card-header">
+        <h5><i class="bi bi-cash-coin me-2 text-primary"></i>Salary Summary</h5>
+        <span class="badge-soft purple">Monthly ÷ {{ stats.period_days }} days × present</span>
+    </div>
+    <div class="card-body p-0">
+        {% if salary_rows %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Employee</th>
+                        <th>Phone</th>
+                        <th>Present Days</th>
+                        <th>Monthly Salary</th>
+                        <th>Per Day</th>
+                        <th class="text-end">Payable</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in salary_rows %}
+                    <tr>
+                        <td>
+                            <div class="employee-cell">
+                                {% if row.employee.photo_url %}
+                                    <img src="{{ row.employee.photo_url }}" class="student-photo" alt="{{ row.employee.name }}">
+                                {% else %}
+                                    <span class="avatar-fallback"><i class="bi bi-person-fill"></i></span>
+                                {% endif %}
+                                <div>
+                                    <strong>{{ row.employee.name }}</strong>
+                                    <small>{{ row.employee.employee_code }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ row.employee.phone or '—' }}</td>
+                        <td><strong>{{ row.present_days }}</strong> / {{ stats.period_days }}</td>
+                        <td>
+                            {% if row.employee.monthly_salary %}
+                                {{ row.employee.monthly_salary|inr }}
+                            {% else %}
+                                <span class="badge-soft absent">Not set</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.salary.per_day|inr if row.salary else '—' }}</td>
+                        <td class="text-end">
+                            {% if row.salary %}
+                                <strong class="text-primary">{{ row.salary.payable|inr }}</strong>
+                            {% else %}
+                                <span class="text-muted-2">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-people"></i>
+            <h5>No employees found</h5>
+            <p>Filter change karein ya pehle employee add karein.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <h5><i class="bi bi-list-check me-2 text-primary"></i>Attendance Details</h5>
+        <span class="badge-soft purple">{{ records|length }} records</span>
+    </div>
+    <div class="card-body p-0">
+        {% if records %}
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        {% if is_admin %}<th>Employee</th>{% endif %}
+                        <th>Phone</th>
+                        <th>Time</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr>
+                        <td><strong>{{ record.date }}</strong></td>
+                        {% if is_admin %}
+                        <td>
+                            {% if record.employee %}
+                                {{ record.employee.name }}
+                                <div class="text-muted-2">{{ record.employee.employee_code }}</div>
+                            {% else %}
+                                <span class="text-muted-2">Deleted employee</span>
+                            {% endif %}
+                        </td>
+                        {% endif %}
+                        <td>{{ record.employee.phone if record.employee else '—' }}</td>
+                        <td>{{ record.time or '—' }}</td>
+                        <td>
+                            <span class="badge-soft purple">
+                                <i class="bi {{ 'bi-camera-fill' if record.method == 'face' else 'bi-hand-index-thumb-fill' }}"></i>
+                                {{ 'Face' if record.method == 'face' else 'Manual' }}
+                            </span>
+                        </td>
+                        <td><span class="badge-soft present"><span class="dot"></span> {{ record.status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <i class="bi bi-inbox"></i>
+            <h5>No attendance in this range</h5>
+            <p>Date range change karke dobara try karein.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+{% if using_sqlite_fallback %}
+    <div class="db-banner{% if is_vercel %} db-banner-danger{% endif %}">
+        <i class="bi bi-database-exclamation"></i>
+        <span>
+            {% if is_vercel %}
+                <strong>Database set nahi hai.</strong> Vercel par SQLite permanent nahi rehta &mdash;
+                <code>DATABASE_URL</code> environment variable me Neon connection string add karein.
+            {% else %}
+                Local SQLite fallback active. Neon PostgreSQL use karne ke liye <code>.env</code> me
+                <code>DATABASE_URL</code> set karein.
+            {% endif %}
+        </span>
+    </div>
+{% endif %}
+{% if ephemeral_uploads %}
+    <div class="db-banner">
+        <i class="bi bi-cloud-slash"></i>
+        <span>
+            Photo storage temporary hai: Vercel par files <code>/tmp</code> me save hoti hain aur naye
+            deployment ke baad delete ho jati hain. Permanent photos ke liye Cloudflare R2 env vars
+            (<code>R2_ACCOUNT_ID</code>, <code>R2_ACCESS_KEY_ID</code>, <code>R2_SECRET_ACCESS_KEY</code>,
+            <code>R2_BUCKET</code>) set karein.
+        </span>
+    </div>
+{% endif %}

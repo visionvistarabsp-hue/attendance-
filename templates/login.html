@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Attently{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-layout">
+        <div class="auth-visual">
+            <div>
+                <div class="brand-row">
+                    <span class="brand-icon"><i class="bi bi-fingerprint"></i></span>
+                    Attently
+                </div>
+            </div>
+            <div>
+                <h2>Attendance,<br>without the paperwork.</h2>
+                <p>Face-recognition attendance for your team, with reports and optional salary calculation built in.</p>
+            </div>
+            <div class="auth-points">
+                <div class="auth-point"><i class="bi bi-check-circle-fill"></i> Employees mark only their own attendance</div>
+                <div class="auth-point"><i class="bi bi-check-circle-fill"></i> Admin manages employees, reports and salary</div>
+                <div class="auth-point"><i class="bi bi-check-circle-fill"></i> Photos securely stored on Cloudflare R2</div>
+            </div>
+        </div>
+
+        <div class="auth-form-panel">
+            <h3>Welcome back</h3>
+            <p class="sub">Apne account se login karein.</p>
+
+            <form method="POST" action="{{ url_for('login') }}">
+                <div class="mb-3">
+                    <label for="username" class="form-label">Username or Email</label>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="admin" required autofocus>
+                </div>
+                <div class="mb-3">
+                    <label for="password" class="form-label">Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
+                        <button class="btn btn-outline-purple" type="button" id="togglePassword" tabindex="-1">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-2">
+                    <i class="bi bi-box-arrow-in-right"></i> Login
+                </button>
+            </form>
+
+            <div class="page-note mt-4">
+                <i class="bi bi-info-circle-fill"></i>
+                <span>Employee account admin banata hai. Agar login nahi hai to apne admin se contact karein.</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const toggle = document.getElementById('togglePassword');
+    const pwd = document.getElementById('password');
+    if (toggle && pwd) {
+        toggle.addEventListener('click', () => {
+            const show = pwd.type === 'password';
+            pwd.type = show ? 'text' : 'password';
+            toggle.innerHTML = `<i class="bi bi-eye${show ? '-slash' : ''}"></i>`;
+        });
+    }
+</script>
+{% endblock %}

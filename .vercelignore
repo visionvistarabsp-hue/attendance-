@@ -1,0 +1,15 @@
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.db
+*.sqlite3
+.env
+.env.*
+!.env.example
+.git/
+.vercel/
+instance/
+attendance_local.db
+.DS_Store

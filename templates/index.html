@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}Attently - Face Recognition Attendance{% endblock %}
+
+{% block content %}
+<div class="landing">
+    <nav class="landing-nav">
+        <div class="landing-brand">
+            <span class="brand-icon"><i class="bi bi-fingerprint"></i></span>
+            Attently
+        </div>
+        <a href="{{ url_for('login') }}" class="btn btn-soft">
+            <i class="bi bi-box-arrow-in-right"></i> Login
+        </a>
+    </nav>
+
+    <section class="hero">
+        <div>
+            <span class="hero-badge"><i class="bi bi-stars"></i> Smart attendance, simply</span>
+            <h1>Face recognition attendance, <span class="accent">beautifully simple.</span></h1>
+            <p>Employees mark their own attendance in seconds. Admins manage the team, view reports with phone numbers, and optionally let salary calculate itself from attendance.</p>
+            <div class="hero-actions">
+                <a href="{{ url_for('login') }}" class="btn btn-light">
+                    <i class="bi bi-box-arrow-in-right"></i> Get Started
+                </a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="glass-stat">
+                <span class="icon-bubble"><i class="bi bi-camera-fill"></i></span>
+                <div><strong>Face check-in</strong><span>Only your own face marks your attendance</span></div>
+            </div>
+            <div class="glass-stat">
+                <span class="icon-bubble"><i class="bi bi-people-fill"></i></span>
+                <div><strong>Admin control</strong><span>Add employees and manage the team</span></div>
+            </div>
+            <div class="glass-stat">
+                <span class="icon-bubble"><i class="bi bi-cash-coin"></i></span>
+                <div><strong>Optional salary</strong><span>Auto calculated from monthly salary &amp; attendance</span></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="feature-card">
+            <span class="icon-bubble"><i class="bi bi-person-check-fill"></i></span>
+            <h5>Self attendance</h5>
+            <p>Employees can only see and mark their own attendance — no cross-marking or editing others.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon-bubble green"><i class="bi bi-cloud-arrow-up-fill"></i></span>
+            <h5>Cloud photo storage</h5>
+            <p>Employee photos are stored on Cloudflare R2, keeping your server light and photos safe.</p>
+        </div>
+        <div class="feature-card">
+            <span class="icon-bubble amber"><i class="bi bi-graph-up-arrow"></i></span>
+            <h5>Reports &amp; salary</h5>
+            <p>Filter attendance by date, see phone numbers in reports, and auto-calculate salary when it is set.</p>
+        </div>
+    </section>
+</div>
+{% endblock %}

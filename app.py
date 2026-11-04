@@ -9,7 +9,6 @@ from decimal import Decimal, InvalidOperation
 from functools import wraps
 
 import boto3
-import face_recognition
 import numpy as np
 import pytz
 from decouple import config
@@ -40,6 +39,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
 from werkzeug.security import check_password_hash, generate_password_hash
 import sqlite3
+
+face_recognition = None
+def _get_face_recognition():
+    global face_recognition
+    if face_recognition is None:
+        import face_recognition as fr
+        face_recognition = fr
+    return face_recognition
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 IST = pytz.timezone('Asia/Kolkata')
@@ -339,9 +346,10 @@ def photo_url_for(employee):
 
 def read_face_encoding(raw):
     """Return the first face encoding from raw image bytes, or None."""
+    fr = _get_face_recognition()
     image = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert('RGB')
     image_np = np.array(image)
-    encodings = face_recognition.face_encodings(image_np)
+    encodings = fr.face_encodings(image_np)
     return encodings[0] if encodings else None
 
 
@@ -966,7 +974,8 @@ def mark_attendance():
             encoded = image_data.split(',', 1)[1]
             raw = base64.b64decode(encoded)
             image_np = np.array(Image.open(io.BytesIO(raw)).convert('RGB'))
-            encodings = face_recognition.face_encodings(image_np)
+            fr = _get_face_recognition()
+            encodings = fr.face_encodings(image_np)
         except Exception:
             return jsonify({'success': False, 'message': 'Image process nahi ho payi.'}), 400
 
@@ -979,7 +988,7 @@ def mark_attendance():
             )
 
         known = np.array(employee.face_encoding)
-        distances = face_recognition.face_distance([known], encodings[0])
+        distances = fr.face_distance([known], encodings[0])
         if len(distances) == 0 or distances[0] > 0.5:
             return jsonify(
                 {

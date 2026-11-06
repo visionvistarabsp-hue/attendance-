@@ -36,8 +36,8 @@
                     <label for="password" class="form-label">Password</label>
                     <div class="input-group flex-nowrap">
                         <input type="password" class="form-control" id="password" name="password" placeholder="••••••••" required>
-                        <button class="btn btn-outline-purple" type="button" id="togglePassword" tabindex="-1" aria-label="Toggle password">
-                            <i class="bi bi-eye"></i>
+                        <button class="btn btn-outline-purple" type="button" id="togglePassword" aria-label="Show password" aria-pressed="false">
+                            <i class="bi bi-eye" aria-hidden="true"></i>
                         </button>
                     </div>
                 </div>
@@ -57,14 +57,23 @@
 
 {% block scripts %}
 <script>
-    const toggle = document.getElementById('togglePassword');
-    const pwd = document.getElementById('password');
-    if (toggle && pwd) {
-        toggle.addEventListener('click', () => {
-            const show = pwd.type === 'password';
+    (function () {
+        const toggle = document.getElementById('togglePassword');
+        const pwd = document.getElementById('password');
+        if (!toggle || !pwd) return;
+        function setState(show) {
             pwd.type = show ? 'text' : 'password';
-            toggle.innerHTML = `<i class="bi bi-eye${show ? '-slash' : ''}"></i>`;
-        });
-    }
+            toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+            toggle.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+            const icon = toggle.querySelector('i');
+            if (icon) icon.className = 'bi ' + (show ? 'bi-eye-slash' : 'bi-eye');
+        }
+        function handleToggle(e) {
+            if (e) { e.preventDefault(); e.stopPropagation(); }
+            setState(pwd.type === 'password');
+        }
+        toggle.addEventListener('click', handleToggle);
+        toggle.addEventListener('touchend', handleToggle, { passive: false });
+    })();
 </script>
 {% endblock %}

@@ -400,8 +400,10 @@ img, video, canvas, svg { max-width: 100%; }
 }
 .attendance-log .list-group-item { flex-wrap: wrap; gap: .5rem; }
 .attendance-log .list-group-item > div { min-width: 0; flex: 1 1 180px; }
-.auth-form-panel .input-group { flex-wrap: nowrap; }
+.auth-form-panel .input-group { flex-wrap: nowrap; position: relative; z-index: 1; }
 .auth-form-panel .input-group .form-control { min-width: 0; }
+#togglePassword { touch-action: manipulation; -webkit-tap-highlight-color: transparent; cursor: pointer; flex: 0 0 auto; min-width: 48px; position: relative; z-index: 2; }
+#togglePassword i { pointer-events: none; }
 .db-banner, .status-banner, .page-note, .alert { word-break: break-word; }
 .landing-nav, .filter-bar, .section-head { gap: 12px; }
 @media (max-width: 575.98px) {

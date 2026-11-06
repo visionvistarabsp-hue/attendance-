@@ -99,12 +99,14 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                <a href="{{ url_for('employee_details', employee_id=employee.id) }}" class="btn btn-sm btn-soft">
-                                    <i class="bi bi-eye"></i> View
-                                </a>
-                                <a href="{{ url_for('edit_employee', employee_id=employee.id) }}" class="btn btn-sm btn-outline-purple">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </a>
+                                <div class="action-group justify-content-end">
+                                    <a href="{{ url_for('employee_details', employee_id=employee.id) }}" class="btn btn-sm btn-soft">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                    <a href="{{ url_for('edit_employee', employee_id=employee.id) }}" class="btn btn-sm btn-outline-purple">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                </div>
                             </td>
                         </tr>
                         {% endfor %}

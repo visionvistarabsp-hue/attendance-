@@ -62,7 +62,7 @@
 
     <div class="main-wrap">
         <header class="topbar">
-            <button class="icon-btn d-lg-none" id="sidebarToggle" aria-label="Open menu">
+            <button class="icon-btn d-lg-none" id="sidebarToggle" aria-label="Open menu" aria-controls="sidebar" aria-expanded="false">
                 <i class="bi bi-list"></i>
             </button>
             <div class="topbar-title">
@@ -93,12 +93,12 @@
     const overlay = document.getElementById('sidebarOverlay');
     const toggle = document.getElementById('sidebarToggle');
     if (toggle && sidebar) {
-        const close = () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); };
-        toggle.addEventListener('click', () => {
-            sidebar.classList.toggle('open');
-            overlay.classList.toggle('show');
-        });
-        overlay.addEventListener('click', close);
+        const close = () => { sidebar.classList.remove('open'); overlay && overlay.classList.remove('show'); toggle.setAttribute('aria-expanded', 'false'); };
+        const open = () => { sidebar.classList.add('open'); overlay && overlay.classList.add('show'); toggle.setAttribute('aria-expanded', 'true'); };
+        toggle.addEventListener('click', () => sidebar.classList.contains('open') ? close() : open());
+        overlay && overlay.addEventListener('click', close);
+        sidebar.querySelectorAll('a').forEach(a => a.addEventListener('click', () => { if (window.innerWidth < 992) close(); }));
+        window.addEventListener('resize', () => { if (window.innerWidth >= 992) close(); });
     }
     document.querySelectorAll('.content .alert').forEach((el) => {
         setTimeout(() => { el.classList.add('fade-out'); }, 4500);

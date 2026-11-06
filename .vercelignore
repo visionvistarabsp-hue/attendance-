@@ -13,16 +13,9 @@ __pycache__/
 instance/
 attendance_local.db
 .DS_Store
-*.tar.gz
-*.whl
 *.zip
 node_modules/
 .cache/
 uploads/
 **/__pycache__/
 **/*.egg-info/
-face_recognition_models*/ 
-*.pth
-*.onnx
-*.h5
-**/models/

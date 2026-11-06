@@ -165,7 +165,8 @@
                         <th>Date</th>
                         {% if is_admin %}<th>Employee</th>{% endif %}
                         <th>Phone</th>
-                        <th>Time</th>
+                        <th>Check-In</th>
+                        <th>Check-Out</th>
                         <th>Method</th>
                         <th>Status</th>
                     </tr>
@@ -185,11 +186,12 @@
                         </td>
                         {% endif %}
                         <td>{{ record.employee.phone if record.employee else '—' }}</td>
-                        <td>{{ record.time or '—' }}</td>
+                        <td>{{ record.time or '—' }}{% if record.method %} <span class="text-muted-2">({{ 'Face' if record.method == 'face' else 'Manual' }})</span>{% endif %}</td>
+                        <td>{{ record.out_time or '—' }}{% if record.out_method %} <span class="text-muted-2">({{ 'Face' if record.out_method == 'face' else 'Manual' }})</span>{% endif %}</td>
                         <td>
-                            <span class="badge-soft purple">
-                                <i class="bi {{ 'bi-camera-fill' if record.method == 'face' else 'bi-hand-index-thumb-fill' }}"></i>
-                                {{ 'Face' if record.method == 'face' else 'Manual' }}
+                            <span class="badge-soft {{ 'present' if record.out_time else 'amber' }}">
+                                <i class="bi {{ 'bi-check2-all' if record.out_time else 'bi-box-arrow-in-right' }}"></i>
+                                {{ 'Complete' if record.out_time else 'Checked in' }}
                             </span>
                         </td>
                         <td><span class="badge-soft present"><span class="dot"></span> {{ record.status }}</span></td>

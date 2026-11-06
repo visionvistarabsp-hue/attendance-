@@ -238,12 +238,23 @@ class Attendance(db.Model):
         index=True,
     )
     date = db.Column(db.Date, nullable=False, index=True)
-    time = db.Column(db.String(8), default='')
+    time = db.Column(db.String(8), default='')  # check-in time
     timestamp = db.Column(db.DateTime(timezone=True), default=lambda: now_ist())
+    out_time = db.Column(db.String(8), default='')
+    out_timestamp = db.Column(db.DateTime(timezone=True), nullable=True)
+    out_method = db.Column(db.String(20), default='')
     status = db.Column(db.String(20), default='Present', nullable=False)
     method = db.Column(db.String(20), default='manual', nullable=False)
 
     employee = db.relationship('Employee', back_populates='attendances')
+
+    @property
+    def check_in_time(self):
+        return self.time or ''
+
+    @property
+    def check_out_time(self):
+        return self.out_time or ''
 
 
 # ---------------------------------------------------------------------------
@@ -409,6 +420,34 @@ def inject_db_state():
 # ---------------------------------------------------------------------------
 # Schema + default admin
 # ---------------------------------------------------------------------------
+def ensure_schema_migrations():
+    """Apply lightweight column migrations for existing databases."""
+    try:
+        cols = db.session.execute(db.text("SELECT column_name FROM information_schema.columns WHERE table_name='attendance'"))
+        names = {r[0] for r in cols}
+        if 'out_time' not in names:
+            db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_time VARCHAR(8) DEFAULT ''"))
+        if 'out_timestamp' not in names:
+            db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_timestamp TIMESTAMPTZ"))
+        if 'out_method' not in names:
+            db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_method VARCHAR(20) DEFAULT ''"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        try:
+            cols = db.session.execute(db.text("PRAGMA table_info(attendance)"))
+            names = {r[1] for r in cols}
+            if 'out_time' not in names:
+                db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_time VARCHAR(8) DEFAULT ''"))
+            if 'out_timestamp' not in names:
+                db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_timestamp DATETIME"))
+            if 'out_method' not in names:
+                db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_method VARCHAR(20) DEFAULT ''"))
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+
 def ensure_default_admin():
     """Create the first admin account if the database has none."""
     if db.session.execute(db.select(User).where(User.role == 'admin')).first():
@@ -434,6 +473,7 @@ def init_db():
         for attempt in range(3):
             try:
                 db.create_all()
+                ensure_schema_migrations()
                 ensure_default_admin()
                 return
             except Exception as exc:  # pragma: no cover - startup diagnostics
@@ -567,6 +607,27 @@ def mark_present(employee, method='manual'):
         ).scalar_one_or_none()
         return False, existing
     return True, record
+
+
+def mark_out(employee, method='manual'):
+    """Mark today's check-out once. Returns (success, record, message)."""
+    today = today_date()
+    record = db.session.execute(
+        db.select(Attendance).where(
+            Attendance.employee_id == employee.id,
+            Attendance.date == today,
+        )
+    ).scalar_one_or_none()
+    if not record:
+        return False, None, 'Aaj ki check-in attendance pehle mark karein.'
+    if getattr(record, 'out_time', ''):
+        return False, record, f"Check-out pehle hi mark hai ({record.out_time})."
+    stamp = now_ist()
+    record.out_time = stamp.strftime('%H:%M:%S')
+    record.out_timestamp = stamp
+    record.out_method = method
+    db.session.commit()
+    return True, record, f"Check-out mark ho gaya — {record.out_time}."
 
 
 # ---------------------------------------------------------------------------
@@ -963,6 +1024,9 @@ def mark_attendance():
         return jsonify({'success': False, 'message': 'Employee record nahi mila.'}), 404
 
     payload = request.get_json(silent=True) or {}
+    action = (payload.get('action') or 'in').strip().lower()
+    if action not in ('in', 'out'):
+        return jsonify({'success': False, 'message': 'Invalid attendance action.'}), 400
     method = 'manual'
 
     if not payload.get('manual'):
@@ -997,21 +1061,33 @@ def mark_attendance():
                 }
             )
 
+    if action == 'out':
+        ok, record, message = mark_out(employee, method)
+        return jsonify({
+            'success': ok,
+            'message': message,
+            'time': (record.out_time if record else '') or '',
+            'method': method,
+            'action': 'out',
+        }), (200 if ok else 400)
+
     created, record = mark_present(employee, method)
     if not created:
         return jsonify(
             {
                 'success': False,
-                'message': f"Aaj ki attendance pehle hi mark hai ({record.time if record else ''}).",
+                'message': f"Aaj ki check-in pehle hi mark hai ({record.time if record else ''}).",
+                'action': 'in',
             }
         )
 
     return jsonify(
         {
             'success': True,
-            'message': f"Attendance mark ho gayi — {record.time} ({'face' if method == 'face' else 'manual'}).",
+            'message': f"Check-in mark ho gayi — {record.time} ({'face' if method == 'face' else 'manual'}).",
             'time': record.time,
             'method': method,
+            'action': 'in',
         }
     )
 
@@ -1125,7 +1201,7 @@ def download_attendance():
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(['Date', 'Employee ID', 'Name', 'Phone', 'Time', 'Status', 'Method'])
+    writer.writerow(['Date', 'Employee ID', 'Name', 'Phone', 'Check-In Time', 'Check-Out Time', 'Status', 'Check-In Method', 'Check-Out Method'])
     for record in records:
         employee = record.employee
         writer.writerow(
@@ -1135,8 +1211,10 @@ def download_attendance():
                 employee.name if employee else '',
                 employee.phone if employee else '',
                 record.time or '',
+                getattr(record, 'out_time', '') or '',
                 record.status or '',
                 record.method or '',
+                getattr(record, 'out_method', '') or '',
             ]
         )
 

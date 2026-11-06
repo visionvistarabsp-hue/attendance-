@@ -178,25 +178,28 @@
                     <h5><i class="bi bi-camera-fill me-2 text-primary"></i>Mark Attendance</h5>
                 </div>
                 <div class="card-body d-flex flex-column">
-                    {% if today_record %}
+                    {% if today_record and today_record.out_time %}
                         <div class="status-banner success mb-3">
                             <i class="bi bi-check-circle-fill"></i>
-                            Aaj ki attendance {{ today_record.time }} par mark hai.
+                            Check-in {{ today_record.time }} · Check-out {{ today_record.out_time }}
                         </div>
-                        <p class="text-muted-2">Aap aaj already present hain. Kal dobara mark kar sakte hain.</p>
-                        <a href="{{ url_for('mark_attendance_page') }}" class="btn btn-outline-purple mt-auto">
-                            <i class="bi bi-camera"></i> Open Camera
-                        </a>
+                        <p class="text-muted-2">Aaj ka aana-jana complete hai.</p>
+                    {% elif today_record %}
+                        <div class="status-banner mb-3">
+                            <i class="bi bi-info-circle-fill"></i>
+                            Check-in {{ today_record.time }} par ho chuka hai. Jaate waqt check-out mark karein.
+                        </div>
+                        <p class="text-muted-2">Sirf aapka chehra aapki attendance mark kar sakta hai.</p>
                     {% else %}
                         <div class="status-banner mb-3">
                             <i class="bi bi-info-circle-fill"></i>
-                            Face verify karke apni attendance mark karein.
+                            Face verify karke apna check-in mark karein.
                         </div>
                         <p class="text-muted-2">Sirf aapka chehra aapki attendance mark kar sakta hai.</p>
-                        <a href="{{ url_for('mark_attendance_page') }}" class="btn btn-primary mt-auto">
-                            <i class="bi bi-camera-fill"></i> Mark My Attendance
-                        </a>
                     {% endif %}
+                        <a href="{{ url_for('mark_attendance_page') }}" class="btn btn-primary mt-auto">
+                            <i class="bi bi-camera-fill"></i> {{ 'Mark Check-Out' if today_record and not today_record.out_time else 'Open Attendance' }}
+                        </a>
                 </div>
             </div>
         </div>
@@ -240,20 +243,15 @@
             <div class="table-responsive">
                 <table class="table">
                     <thead>
-                        <tr><th>Date</th><th>Time</th><th>Method</th><th>Status</th></tr>
+                        <tr><th>Date</th><th>Check-In</th><th>Check-Out</th><th>Status</th></tr>
                     </thead>
                     <tbody>
                         {% for record in records %}
                         <tr>
                             <td>{{ record.date }}</td>
-                            <td>{{ record.time or '—' }}</td>
-                            <td>
-                                <span class="badge-soft purple">
-                                    <i class="bi {{ 'bi-camera-fill' if record.method == 'face' else 'bi-hand-index-thumb-fill' }}"></i>
-                                    {{ 'Face' if record.method == 'face' else 'Manual' }}
-                                </span>
-                            </td>
-                            <td><span class="badge-soft present"><span class="dot"></span> {{ record.status }}</span></td>
+                            <td>{{ record.time or '—' }}{% if record.method %} <span class="text-muted-2">({{ 'Face' if record.method == 'face' else 'Manual' }})</span>{% endif %}</td>
+                            <td>{{ record.out_time or '—' }}{% if record.out_method %} <span class="text-muted-2">({{ 'Face' if record.out_method == 'face' else 'Manual' }})</span>{% endif %}</td>
+                            <td><span class="badge-soft {{ 'present' if record.out_time else 'amber' }}"><span class="dot"></span> {{ 'Complete' if record.out_time else 'Checked in' }}</span></td>
                         </tr>
                         {% endfor %}
                     </tbody>

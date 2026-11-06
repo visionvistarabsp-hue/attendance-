@@ -2,36 +2,43 @@
 
 {% block title %}Mark Attendance - Attently{% endblock %}
 {% block page_title %}Mark Attendance{% endblock %}
-{% block page_subtitle %}Face verify karke apni attendance mark karein{% endblock %}
+{% block page_subtitle %}Face verify karke check-in ya check-out mark karein{% endblock %}
 
 {% block content %}
+{% set checked_in = today_record and (today_record.time or '') %}
+{% set checked_out = today_record and (today_record.out_time or '') %}
 <div class="row g-4">
     <div class="col-lg-7">
         <div class="card">
             <div class="card-header">
-                <h5><i class="bi bi-camera-fill me-2 text-primary"></i>Camera Check-in</h5>
-                {% if today_record %}
-                    <span class="badge-soft present"><span class="dot"></span> Marked at {{ today_record.time }}</span>
+                <h5><i class="bi bi-camera-fill me-2 text-primary"></i>Camera Check-in / Check-out</h5>
+                {% if checked_in and checked_out %}
+                    <span class="badge-soft present"><span class="dot"></span> In {{ today_record.time }} · Out {{ today_record.out_time }}</span>
+                {% elif checked_in %}
+                    <span class="badge-soft amber"><span class="dot"></span> In {{ today_record.time }} · Out pending</span>
                 {% else %}
-                    <span class="badge-soft amber"><span class="dot"></span> Pending</span>
+                    <span class="badge-soft amber"><span class="dot"></span> Check-in pending</span>
                 {% endif %}
             </div>
             <div class="card-body">
                 <div class="camera-frame mb-3">
-                    <video id="video" autoplay playsinline muted {% if today_record %}style="display:none;"{% endif %}></video>
-                    <div class="camera-placeholder" id="cameraPlaceholder" {% if today_record %}style="display:none;"{% endif %}>
+                    <video id="video" autoplay playsinline muted style="display:none;"></video>
+                    <div class="camera-placeholder" id="cameraPlaceholder">
                         <i class="bi bi-camera-video"></i>
                         <strong>Camera band hai</strong>
-                        <div>Start camera dabaein ya manual attendance lagayein.</div>
+                        <div>Start camera dabaein ya manual option use karein.</div>
                     </div>
-                    <div class="scan-line" id="scanLine" {% if today_record %}style="display:none;"{% endif %}></div>
+                    <div class="scan-line" id="scanLine" style="display:none;"></div>
                 </div>
                 <canvas id="canvas" class="d-none"></canvas>
 
-                <div id="statusBox" class="status-banner {{ 'success' if today_record else '' }}">
-                    {% if today_record %}
+                <div id="statusBox" class="status-banner {{ 'success' if checked_in and checked_out else '' }}">
+                    {% if checked_in and checked_out %}
                         <i class="bi bi-check-circle-fill"></i>
-                        Aaj ki attendance {{ today_record.time }} par mark hai.
+                        Aaj ka check-in {{ today_record.time }} aur check-out {{ today_record.out_time }} par mark hai.
+                    {% elif checked_in %}
+                        <i class="bi bi-info-circle-fill"></i>
+                        Check-in {{ today_record.time }} par ho chuka hai. Jaate waqt check-out mark karein.
                     {% else %}
                         <i class="bi bi-info-circle-fill"></i>
                         Ready jab aap camera start karenge.
@@ -42,14 +49,20 @@
                     <button type="button" class="btn btn-soft" id="startCamera">
                         <i class="bi bi-camera-video-fill"></i> Start Camera
                     </button>
-                    <button type="button" class="btn btn-primary" id="captureBtn" {% if today_record %}disabled{% endif %}>
-                        <i class="bi bi-person-check-fill"></i> Verify &amp; Mark
+                    <button type="button" class="btn btn-primary" id="captureInBtn" {% if checked_in %}disabled{% endif %}>
+                        <i class="bi bi-box-arrow-in-right"></i> Face Check-In
                     </button>
-                    <button type="button" class="btn btn-outline-purple" id="manualBtn" {% if today_record %}disabled{% endif %}>
-                        <i class="bi bi-hand-index-thumb-fill"></i> Mark Manually
+                    <button type="button" class="btn btn-success" id="captureOutBtn" {% if not checked_in or checked_out %}disabled{% endif %}>
+                        <i class="bi bi-box-arrow-right"></i> Face Check-Out
+                    </button>
+                    <button type="button" class="btn btn-outline-purple" id="manualInBtn" {% if checked_in %}disabled{% endif %}>
+                        <i class="bi bi-hand-index-thumb-fill"></i> Manual Check-In
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="manualOutBtn" {% if not checked_in or checked_out %}disabled{% endif %}>
+                        <i class="bi bi-hand-index-thumb"></i> Manual Check-Out
                     </button>
                 </div>
-                <div class="form-text mt-2">Face verify me sirf aapka hi chehra match hoga. Doosre ki attendance mark nahi ho sakti.</div>
+                <div class="form-text mt-2">Face verify me sirf aapka hi chehra match hoga. Check-in aur check-out dono ka time save hota hai.</div>
             </div>
         </div>
     </div>
@@ -75,19 +88,20 @@
                 <div class="attendance-log">
                     {% if records %}
                         {% for record in records %}
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div class="list-group-item d-flex justify-content-between align-items-start">
                             <div>
                                 <strong>{{ record.date }}</strong>
-                                <div class="text-muted-2">{{ record.time or '—' }} · {{ 'Face' if record.method == 'face' else 'Manual' }}</div>
+                                <div class="text-muted-2">In: {{ record.time or '—' }}{% if record.method %} ({{ 'Face' if record.method == 'face' else 'Manual' }}){% endif %}</div>
+                                <div class="text-muted-2">Out: {{ record.out_time or '—' }}{% if record.out_method %} ({{ 'Face' if record.out_method == 'face' else 'Manual' }}){% endif %}</div>
                             </div>
-                            <span class="badge-soft present"><span class="dot"></span> {{ record.status }}</span>
+                            <span class="badge-soft {{ 'present' if record.out_time else 'amber' }}"><span class="dot"></span> {{ 'Complete' if record.out_time else 'Checked in' }}</span>
                         </div>
                         {% endfor %}
                     {% else %}
                         <div class="empty-state py-4">
                             <i class="bi bi-calendar-x"></i>
                             <h5>No records yet</h5>
-                            <p>Pehli attendance mark karein.</p>
+                            <p>Pehla check-in mark karein.</p>
                         </div>
                     {% endif %}
                 </div>
@@ -103,8 +117,10 @@ document.addEventListener('DOMContentLoaded', function () {
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const startBtn = document.getElementById('startCamera');
-    const captureBtn = document.getElementById('captureBtn');
-    const manualBtn = document.getElementById('manualBtn');
+    const captureInBtn = document.getElementById('captureInBtn');
+    const captureOutBtn = document.getElementById('captureOutBtn');
+    const manualInBtn = document.getElementById('manualInBtn');
+    const manualOutBtn = document.getElementById('manualOutBtn');
     const statusBox = document.getElementById('statusBox');
     const placeholder = document.getElementById('cameraPlaceholder');
     const scanLine = document.getElementById('scanLine');
@@ -120,6 +136,7 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     async function startCamera() {
+        if (stream) return;
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             setStatus('Is browser me camera support nahi hai.', 'error');
             return;
@@ -131,44 +148,38 @@ document.addEventListener('DOMContentLoaded', function () {
             placeholder.style.display = 'none';
             video.style.display = 'block';
             if (scanLine) scanLine.style.display = 'block';
-            setStatus('Camera ready hai. Ab "Verify & Mark" dabaein.', '');
+            setStatus('Camera ready hai. Check-in ya check-out button dabayein.', '');
         } catch (err) {
-            setStatus('Camera access nahi mila. Permission check karein, ya manual attendance lagayein.', 'error');
+            setStatus('Camera access nahi mila. Permission check karein, ya manual option use karein.', 'error');
         }
     }
 
     async function postAttendance(payload) {
         if (busy) return;
         busy = true;
-        captureBtn.disabled = true;
-        manualBtn.disabled = true;
+        [captureInBtn, captureOutBtn, manualInBtn, manualOutBtn].forEach(b => b && (b.disabled = true));
         try {
             const res = await fetch('{{ url_for("mark_attendance") }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({ success: false, message: 'Server response read nahi ho paya.' }));
             if (data.success) {
                 setStatus(data.message, 'success');
                 setTimeout(() => window.location.reload(), 1200);
             } else {
-                setStatus(data.message, 'error');
-                captureBtn.disabled = false;
-                manualBtn.disabled = false;
+                setStatus(data.message || 'Attendance mark nahi hui.', 'error');
+                setTimeout(() => window.location.reload(), 1400);
             }
         } catch (err) {
             setStatus('Network error. Dobara koshish karein.', 'error');
-            captureBtn.disabled = false;
-            manualBtn.disabled = false;
         } finally {
             busy = false;
         }
     }
 
-    startBtn.addEventListener('click', startCamera);
-
-    captureBtn.addEventListener('click', async function () {
+    async function captureAndPost(action) {
         if (!stream) {
             await startCamera();
             if (!stream) return;
@@ -181,14 +192,22 @@ document.addEventListener('DOMContentLoaded', function () {
         canvas.height = video.videoHeight;
         canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
         const image = canvas.toDataURL('image/jpeg', 0.9);
-        setStatus('Face verify ho raha hai...', '');
-        await postAttendance({ image: image });
-    });
+        setStatus(action === 'out' ? 'Face verify ho raha hai (check-out)...' : 'Face verify ho raha hai (check-in)...', '');
+        await postAttendance({ image, action });
+    }
 
-    manualBtn.addEventListener('click', async function () {
-        if (!confirm('Manual attendance mark karni hai? Face verify nahi hoga.')) return;
-        setStatus('Attendance mark ho rahi hai...', '');
-        await postAttendance({ manual: true });
+    startBtn.addEventListener('click', startCamera);
+    captureInBtn && captureInBtn.addEventListener('click', () => captureAndPost('in'));
+    captureOutBtn && captureOutBtn.addEventListener('click', () => captureAndPost('out'));
+    manualInBtn && manualInBtn.addEventListener('click', async function () {
+        if (!confirm('Manual check-in mark karni hai? Face verify nahi hoga.')) return;
+        setStatus('Check-in mark ho raha hai...', '');
+        await postAttendance({ manual: true, action: 'in' });
+    });
+    manualOutBtn && manualOutBtn.addEventListener('click', async function () {
+        if (!confirm('Manual check-out mark karna hai? Face verify nahi hoga.')) return;
+        setStatus('Check-out mark ho raha hai...', '');
+        await postAttendance({ manual: true, action: 'out' });
     });
 
     window.addEventListener('beforeunload', () => {

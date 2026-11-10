@@ -119,6 +119,17 @@
         setTimeout(() => { el.classList.add('fade-out'); }, 4500);
         setTimeout(() => { el.remove(); }, 5200);
     });
+
+    // Handle responsive map resize on window resize
+    let mapResizeTimeout;
+    window.addEventListener('resize', () => {
+        clearTimeout(mapResizeTimeout);
+        mapResizeTimeout = setTimeout(() => {
+            if (typeof map !== 'undefined' && map) {
+                map.invalidateSize();
+            }
+        }, 250);
+    });
 </script>
 {% block scripts %}{% endblock %}
 </body>

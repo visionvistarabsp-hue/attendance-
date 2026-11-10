@@ -6,7 +6,7 @@
 
 {% block content %}
 <div class="row g-4">
-    <div class="col-lg-6">
+    <div class="col-12 col-lg-6">
         <div class="card">
             <div class="card-header">
                 <h5><i class="bi bi-calendar-fill me-2 text-primary"></i>Nayi Leave Request</h5>
@@ -14,11 +14,11 @@
             <div class="card-body">
                 <form method="POST" action="{{ url_for('leave_page') }}">
                     <div class="row g-3 mb-3">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <label class="form-label">Start Date <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="start_date" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <label class="form-label">End Date <span class="text-danger">*</span></label>
                             <input type="date" class="form-control" name="end_date" required>
                         </div>
@@ -28,28 +28,30 @@
                         <textarea class="form-control" name="reason" rows="3" placeholder="Kyun chutti chahiye?"></textarea>
                     </div>
                     <div class="form-text">Leave approve hone par us din ki attendance block ho jayegi.</div>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-paperplane"></i> Request Bhejein</button>
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-soft">Cancel</a>
+                    <div class="d-flex-responsive gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-paperplane"></i> Request Bhejein</button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-soft">Cancel</a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-6">
+    <div class="col-12 col-lg-6">
         <div class="card">
             <div class="card-header">
                 <h5><i class="bi bi-clock-history me-2 text-primary"></i>Meri Leave Requests</h5>
             </div>
             <div class="card-body p-0">
                 {% if my_leaves %}
-                <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead><tr><th>Dates</th><th>Days</th><th>Reason</th><th class="text-end">Status</th></tr></thead>
+                <div class="table-responsive leave-table-container">
+                    <table class="table mb-0 leave-table">
+                        <thead><tr><th>Dates</th><th class="hide-on-mobile">Days</th><th>Reason</th><th class="text-end">Status</th></tr></thead>
                         <tbody>
                             {% for leave in my_leaves %}
                             <tr>
                                 <td>{{ leave.start_date }} to {{ leave.end_date }}</td>
-                                <td>{{ leave.days }}</td>
+                                <td class="hide-on-mobile">{{ leave.days }}</td>
                                 <td>{{ leave.reason or '—' }}</td>
                                 <td class="text-end"><span class="badge-soft {{ 'present' if leave.status == 'approved' else ('danger' if leave.status == 'rejected' else 'amber') }}"><span class="dot"></span> {{ 'Approved' if leave.status == 'approved' else ('Rejected' if leave.status == 'rejected' else 'Pending') }}</span></td>
                             </tr>

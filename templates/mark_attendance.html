@@ -8,7 +8,7 @@
 {% set checked_in = today_record and (today_record.time or '') %}
 {% set checked_out = today_record and (today_record.out_time or '') %}
 <div class="row g-4">
-    <div class="col-lg-7">
+    <div class="col-12 col-lg-7">
         <div class="card">
             <div class="card-header">
                 <h5><i class="bi bi-camera-fill me-2 text-primary"></i>Camera Check-in / Check-out</h5>
@@ -21,7 +21,7 @@
                 {% endif %}
             </div>
             <div class="card-body">
-                <div class="camera-frame mb-3">
+                <div class="camera-frame mb-3" style="aspect-ratio: 4 / 3; max-height: 50vh;">
                     <video id="video" autoplay playsinline muted style="display:none;"></video>
                     <div class="camera-placeholder" id="cameraPlaceholder">
                         <i class="bi bi-camera-video"></i>
@@ -31,10 +31,10 @@
                     <div class="scan-line" id="scanLine" style="display:none;"></div>
                 </div>
 
-                <div id="locationStatus" class="location-status mb-3" style="display:none;">
+                <div id="locationStatus" class="location-status mb-3 d-flex align-items-center gap-2" style="display:none;">
                     <i class="bi bi-geo-alt-fill"></i>
-                    <span id="locationText">Location fetch ho raha hai...</span>
-                    <span id="locationBadge" class="badge ms-2"></span>
+                    <span id="locationText" class="flex-grow-1">Location fetch ho raha hai...</span>
+                    <span id="locationBadge" class="badge"></span>
                 </div>
 
                 <canvas id="canvas" class="d-none"></canvas>
@@ -52,20 +52,20 @@
                     {% endif %}
                 </div>
 
-                <div class="d-flex flex-wrap gap-2 mt-3 responsive-form-actions">
-                    <button type="button" class="btn btn-soft" id="startCamera">
+                <div class="btn-group-mobile-stack mt-3">
+                    <button type="button" class="btn btn-soft w-100" id="startCamera">
                         <i class="bi bi-camera-video-fill"></i> Start Camera
                     </button>
-                    <button type="button" class="btn btn-primary" id="captureInBtn" {% if checked_in %}disabled{% endif %}>
+                    <button type="button" class="btn btn-primary w-100" id="captureInBtn" {% if checked_in %}disabled{% endif %}>
                         <i class="bi bi-box-arrow-in-right"></i> Face Check-In
                     </button>
-                    <button type="button" class="btn btn-success" id="captureOutBtn" {% if not checked_in or checked_out %}disabled{% endif %}>
+                    <button type="button" class="btn btn-success w-100" id="captureOutBtn" {% if not checked_in or checked_out %}disabled{% endif %}>
                         <i class="bi bi-box-arrow-right"></i> Face Check-Out
                     </button>
-                    <button type="button" class="btn btn-outline-purple" id="manualInBtn" {% if checked_in %}disabled{% endif %}>
+                    <button type="button" class="btn btn-outline-purple w-100" id="manualInBtn" {% if checked_in %}disabled{% endif %}>
                         <i class="bi bi-hand-index-thumb-fill"></i> Manual Check-In
                     </button>
-                    <button type="button" class="btn btn-outline-secondary" id="manualOutBtn" {% if not checked_in or checked_out %}disabled{% endif %}>
+                    <button type="button" class="btn btn-outline-secondary w-100" id="manualOutBtn" {% if not checked_in or checked_out %}disabled{% endif %}>
                         <i class="bi bi-hand-index-thumb"></i> Manual Check-Out
                     </button>
                 </div>
@@ -74,7 +74,7 @@
         </div>
     </div>
 
-    <div class="col-lg-5">
+    <div class="col-12 col-lg-5">
         <div class="card mb-4">
             <div class="card-body text-center">
                 {% if employee.photo_url %}
@@ -95,13 +95,13 @@
                 <div class="attendance-log">
                     {% if records %}
                         {% for record in records %}
-                        <div class="list-group-item d-flex justify-content-between align-items-start">
-                            <div>
-                                <strong>{{ record.date }}</strong>
-                                <div class="text-muted-2">In: {{ record.time or '—' }}{% if record.method %} ({{ 'Face' if record.method == 'face' else 'Manual' }}){% endif %}</div>
-                                <div class="text-muted-2">Out: {{ record.out_time or '—' }}{% if record.out_method %} ({{ 'Face' if record.out_method == 'face' else 'Manual' }}){% endif %}</div>
+                        <div class="list-group-item d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2">
+                            <div class="flex-grow-1 min-width-0">
+                                <strong class="d-block">{{ record.date }}</strong>
+                                <div class="text-muted-2 small">In: {{ record.time or '—' }}{% if record.method %} ({{ 'Face' if record.method == 'face' else 'Manual' }}){% endif %}</div>
+                                <div class="text-muted-2 small">Out: {{ record.out_time or '—' }}{% if record.out_method %} ({{ 'Face' if record.out_method == 'face' else 'Manual' }}){% endif %}</div>
                             </div>
-                            <span class="badge-soft {{ 'present' if record.out_time else 'amber' }}"><span class="dot"></span> {{ 'Complete' if record.out_time else 'Checked in' }}</span>
+                            <span class="badge-soft {{ 'present' if record.out_time else 'amber' }} flex-shrink-0"><span class="dot"></span> {{ 'Complete' if record.out_time else 'Checked in' }}</span>
                         </div>
                         {% endfor %}
                     {% else %}

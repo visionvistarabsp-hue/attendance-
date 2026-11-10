@@ -11,27 +11,29 @@
     </div>
     <div class="card-body p-0">
         {% if notices %}
-        <div class="table-responsive">
-            <table class="table mb-0">
+        <div class="table-responsive admin-notice-table-container">
+            <table class="table mb-0 admin-notice-table">
                 <thead>
-                    <tr><th>Employee</th><th>Period</th><th>Days</th><th>Reason</th><th>Status</th><th class="text-end">Action</th></tr>
+                    <tr><th>Employee</th><th class="hide-on-mobile">Period</th><th class="hide-on-mobile">Days</th><th>Reason</th><th>Status</th><th class="text-end">Action</th></tr>
                 </thead>
                 <tbody>
                     {% for notice in notices %}
                     <tr>
                         <td>{{ notice.employee.name }} <div class="text-muted-2 small">{{ notice.employee.employee_code }}</div></td>
-                        <td>{{ notice.notice_start }} to {{ notice.notice_end }}</td>
-                        <td>{{ notice.days }} days</td>
+                        <td class="hide-on-mobile">{{ notice.notice_start }} to {{ notice.notice_end }}</td>
+                        <td class="hide-on-mobile">{{ notice.days }} days</td>
                         <td>{{ notice.reason or '—' }}</td>
                         <td><span class="badge-soft {{ 'present' if notice.status == 'approved' else ('danger' if notice.status == 'rejected' else 'amber') }}"><span class="dot"></span> {{ notice.status|capitalize }}</span></td>
                         <td class="text-end">
                             {% if notice.status == 'pending' %}
-                            <form method="POST" action="{{ url_for('admin_notice_action', notice_id=notice.id, action='approve') }}" style="display:inline;" onsubmit="return confirm('Approve karna hai?');">
-                                <button class="btn btn-sm btn-success">Approve</button>
-                            </form>
-                            <form method="POST" action="{{ url_for('admin_notice_action', notice_id=notice.id, action='reject') }}" style="display:inline; margin-left:6px;" onsubmit="return confirm('Reject karna hai?');">
-                                <button class="btn btn-sm btn-danger">Reject</button>
-                            </form>
+                            <div class="d-flex-responsive gap-2 justify-content-end">
+                                <form method="POST" action="{{ url_for('admin_notice_action', notice_id=notice.id, action='approve') }}" style="display:inline;" onsubmit="return confirm('Approve karna hai?');">
+                                    <button class="btn btn-sm btn-success w-100">Approve</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin_notice_action', notice_id=notice.id, action='reject') }}" style="display:inline;" onsubmit="return confirm('Reject karna hai?');">
+                                    <button class="btn btn-sm btn-danger w-100">Reject</button>
+                                </form>
+                            </div>
                             {% else %}
                             <span class="text-muted-2 small">Reviewed</span>
                             {% endif %}

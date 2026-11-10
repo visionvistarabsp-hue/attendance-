@@ -5,20 +5,20 @@
 {% block page_subtitle %}Adhiktam 5 office locations aur unka radius (meter) set karein{% endblock %}
 
 {% block content %}
-<div class="row g-4">
+<div class="row g-4 g-lg-5">
     <div class="col-lg-8">
-        <div class="card">
+        <div class="card locations-form">
             <div class="card-header">
                 <h5><i class="bi bi-geo-alt-fill me-2 text-primary"></i>Nayi Office Location Jodein</h5>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('admin_locations') }}">
                     <div class="row g-3 mb-4">
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <label class="form-label">Location Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="name" placeholder="e.g. Head Office, Connaught Place" required>
                         </div>
-                        <div class="col-md-6">
+                        <div class="col-12 col-md-6">
                             <label class="form-label">Radius (Meter) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control" name="radius_meters" value="100" min="10" placeholder="100" required>
                             <div class="form-text">User isse do meter ke andar hona chahiye.</div>
@@ -28,14 +28,14 @@
                     <div class="card mb-4">
                         <div class="card-body">
                             <label class="form-label d-block mb-2">Google Maps se Location Chunein <span class="text-muted-2 fw-normal">(ya neeche manual lat/lng bharein)</span></label>
-                            <div id="map" style="height: 340px; border-radius: 14px; border: 1px solid var(--line); background: #fff;"></div>
+                            <div id="map" class="office-locations-map" style="border-radius: 14px; border: 1px solid var(--line); background: #fff;"></div>
                             <div class="form-text mt-2">Map par click karein ya marker drag karein — lat/lng auto fill ho jayega.</div>
                             <div class="row g-3 mt-3">
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <label class="form-label">Latitude <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="manual_lat" name="latitude" placeholder="e.g. 28.6139" required>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-12 col-md-6">
                                     <label class="form-label">Longitude <span class="text-danger">*</span></label>
                                     <input type="text" class="form-control" id="manual_lng" name="longitude" placeholder="e.g. 77.2090" required>
                                 </div>
@@ -51,7 +51,7 @@
                         </div>
                     </div>
 
-                    <div class="d-flex gap-2">
+                    <div class="d-flex-responsive gap-2">
                         <button type="submit" class="btn btn-primary"><i class="bi bi-geo-alt"></i> Location Save Karein</button>
                         <a href="{{ url_for('dashboard') }}" class="btn btn-soft">Cancel</a>
                     </div>
@@ -83,28 +83,30 @@
                 <h5><i class="bi bi-buildings me-2 text-primary"></i>Saved Locations</h5>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table mb-0">
+                <div class="table-responsive locations-table-container">
+                    <table class="table mb-0 office-locations-table">
                         <thead>
-                            <tr><th>Name</th><th>Lat / Lng</th><th>Radius</th><th>Status</th><th class="text-end">Action</th></tr>
+                            <tr><th>Name</th><th class="hide-on-mobile">Lat / Lng</th><th class="hide-on-mobile">Radius</th><th>Status</th><th class="text-end">Action</th></tr>
                         </thead>
                         <tbody>
                             {% for loc in locations %}
                             <tr>
                                 <td>{{ loc.name }}</td>
-                                <td>{{ '%.4f'|format(loc.latitude) }} / {{ '%.4f'|format(loc.longitude) }}</td>
-                                <td>{{ loc.radius_meters }} m</td>
+                                <td class="hide-on-mobile">{{ '%.4f'|format(loc.latitude) }} / {{ '%.4f'|format(loc.longitude) }}</td>
+                                <td class="hide-on-mobile">{{ loc.radius_meters }} m</td>
                                 <td><span class="badge-soft {{ 'present' if loc.is_active else 'amber' }}"><span class="dot"></span> {{ 'Active' if loc.is_active else 'Inactive' }}</span></td>
                                 <td class="text-end">
-                                    <form method="POST" action="{{ url_for('toggle_location', loc_id=loc.id) }}" style="display:inline;" onsubmit="return confirm('Location {{ 'deactivate' if loc.is_active else 'activate' }} karna hai?');">
-                                        <button class="btn btn-sm btn-soft">{{ 'Deactivate' if loc.is_active else 'Activate' }}</button>
-                                    </form>
-                                    <form method="POST" action="{{ url_for('delete_location', loc_id=loc.id) }}" style="display:inline; margin-left:6px;" onsubmit="return confirm('Location delete karna hai?');">
-                                        <button class="btn btn-sm btn-outline-purple"><i class="bi bi-trash"></i></button>
-                                    </form>
-                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="centerMapOnLocation({{ loc.latitude }}, {{ loc.longitude }}, {{ loc.name | tojson }})">
-                                        <i class="bi bi-map"></i> Show
-                                    </button>
+                                    <div class="d-flex-responsive gap-2 justify-content-end">
+                                        <form method="POST" action="{{ url_for('toggle_location', loc_id=loc.id) }}" style="display:inline;" onsubmit="return confirm('Location {{ 'deactivate' if loc.is_active else 'activate' }} karna hai?');">
+                                            <button class="btn btn-sm btn-soft">{{ 'Deactivate' if loc.is_active else 'Activate' }}</button>
+                                        </form>
+                                        <form method="POST" action="{{ url_for('delete_location', loc_id=loc.id) }}" style="display:inline;" onsubmit="return confirm('Location delete karna hai?');">
+                                            <button class="btn btn-sm btn-outline-purple"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="centerMapOnLocation({{ loc.latitude }}, {{ loc.longitude }}, {{ loc.name | tojson }})">
+                                            <i class="bi bi-map"></i> Show
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                             {% endfor %}

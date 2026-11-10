@@ -6,49 +6,53 @@
 
 {% block content %}
 <div class="row g-4">
-    <div class="col-lg-6">
+    <div class="col-12 col-lg-6">
         <div class="card">
             <div class="card-header">
                 <h5><i class="bi bi-door-open me-2 text-primary"></i>Nayi Notice Period Request</h5>
             </div>
             <div class="card-body">
                 <form method="POST" action="{{ url_for('notice_page') }}">
-                    <div class="mb-3">
-                        <label class="form-label">Notice Start Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" name="notice_start" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Notice Period (Months) <span class="text-danger">*</span></label>
-                        <input type="number" class="form-control" name="notice_months" min="1" value="1" placeholder="e.g. 1, 2, 3" required>
-                        <div class="form-text">End date auto calculate hogi (1 month ≈ 30 days).</div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-12">
+                            <label class="form-label">Notice Start Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" name="notice_start" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Notice Period (Months) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="notice_months" min="1" value="1" placeholder="e.g. 1, 2, 3" required>
+                            <div class="form-text">End date auto calculate hogi (1 month ≈ 30 days).</div>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Reason</label>
                         <textarea class="form-control" name="reason" rows="3" placeholder="Office kyun chhodna chahte hain?"></textarea>
                     </div>
                     <div class="form-text">Approved notice period ke dauran attendance block ho jayegi.</div>
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-paperplane"></i> Request Bhejein</button>
-                    <a href="{{ url_for('dashboard') }}" class="btn btn-soft">Cancel</a>
+                    <div class="d-flex-responsive gap-2 mt-3">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-paperplane"></i> Request Bhejein</button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-soft">Cancel</a>
+                    </div>
                 </form>
             </div>
         </div>
     </div>
 
-    <div class="col-lg-6">
+    <div class="col-12 col-lg-6">
         <div class="card">
             <div class="card-header">
                 <h5><i class="bi bi-clock-history me-2 text-primary"></i>Meri Notice Requests</h5>
             </div>
             <div class="card-body p-0">
                 {% if my_notices %}
-                <div class="table-responsive">
-                    <table class="table mb-0">
-                        <thead><tr><th>Period</th><th>Days</th><th>Reason</th><th class="text-end">Status</th></tr></thead>
+                <div class="table-responsive notice-table-container">
+                    <table class="table mb-0 notice-table">
+                        <thead><tr><th>Period</th><th class="hide-on-mobile">Days</th><th>Reason</th><th class="text-end">Status</th></tr></thead>
                         <tbody>
                             {% for notice in my_notices %}
                             <tr>
                                 <td>{{ notice.notice_start }} to {{ notice.notice_end }}</td>
-                                <td>{{ notice.days }} days</td>
+                                <td class="hide-on-mobile">{{ notice.days }} days</td>
                                 <td>{{ notice.reason or '—' }}</td>
                                 <td class="text-end"><span class="badge-soft {{ 'present' if notice.status == 'approved' else ('danger' if notice.status == 'rejected' else 'amber') }}"><span class="dot"></span> {{ 'Approved' if notice.status == 'approved' else ('Rejected' if notice.status == 'rejected' else 'Pending') }}</span></td>
                             </tr>

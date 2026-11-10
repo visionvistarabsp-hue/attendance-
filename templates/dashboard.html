@@ -54,14 +54,14 @@
     <div class="card">
         <div class="card-body p-0">
             {% if employees %}
-            <div class="table-responsive">
-                <table class="table">
+            <div class="table-responsive dashboard-table-container">
+                <table class="table dashboard-table">
                     <thead>
                         <tr>
                             <th>Employee</th>
-                            <th>Phone</th>
-                            <th>Email</th>
-                            <th>Monthly Salary</th>
+                            <th class="hide-on-mobile">Phone</th>
+                            <th class="hide-on-desktop hide-on-tablet">Email</th>
+                            <th class="hide-on-mobile">Monthly Salary</th>
                             <th>Today</th>
                             <th class="text-end">Actions</th>
                         </tr>
@@ -82,9 +82,9 @@
                                     </div>
                                 </div>
                             </td>
-                            <td>{{ employee.phone or '—' }}</td>
-                            <td class="text-muted-2">{{ employee.email or '—' }}</td>
-                            <td>
+                            <td class="hide-on-mobile">{{ employee.phone or '—' }}</td>
+                            <td class="hide-on-desktop hide-on-tablet text-muted-2">{{ employee.email or '—' }}</td>
+                            <td class="hide-on-mobile">
                                 {% if employee.monthly_salary %}
                                     {{ employee.monthly_salary|inr }}
                                 {% else %}
@@ -99,7 +99,7 @@
                                 {% endif %}
                             </td>
                             <td class="text-end">
-                                <div class="action-group justify-content-end">
+                                <div class="d-flex-responsive gap-2 justify-content-end">
                                     <a href="{{ url_for('employee_details', employee_id=employee.id) }}" class="btn btn-sm btn-soft">
                                         <i class="bi bi-eye"></i> View
                                     </a>
@@ -174,7 +174,7 @@
     </div>
 
     <div class="row g-4">
-        <div class="col-lg-5">
+        <div class="col-12 col-lg-5">
             <div class="card h-100">
                 <div class="card-header">
                     <h5><i class="bi bi-camera-fill me-2 text-primary"></i>Mark Attendance</h5>
@@ -199,14 +199,14 @@
                         </div>
                         <p class="text-muted-2">Sirf aapka chehra aapki attendance mark kar sakta hai.</p>
                     {% endif %}
-                        <a href="{{ url_for('mark_attendance_page') }}" class="btn btn-primary mt-auto">
+                        <a href="{{ url_for('mark_attendance_page') }}" class="btn btn-primary mt-auto w-100 w-lg-auto">
                             <i class="bi bi-camera-fill"></i> {{ 'Mark Check-Out' if today_record and not today_record.out_time else 'Open Attendance' }}
                         </a>
                 </div>
             </div>
         </div>
 
-        <div class="col-lg-7">
+        <div class="col-12 col-lg-7">
             {% if salary %}
             <div class="salary-card h-100">
                 <div class="label">Estimated Salary · This Month</div>
@@ -242,8 +242,8 @@
         </div>
         <div class="card-body p-0">
             {% if records %}
-            <div class="table-responsive">
-                <table class="table">
+            <div class="table-responsive dashboard-table-container">
+                <table class="table dashboard-table">
                     <thead>
                         <tr><th>Date</th><th>Check-In</th><th>Check-Out</th><th>Status</th></tr>
                     </thead>

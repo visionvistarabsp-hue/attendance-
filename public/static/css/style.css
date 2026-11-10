@@ -543,6 +543,10 @@ img, video, canvas, svg { max-width: 100%; }
     .auth-form-panel { padding: 34px; }
     .card-header { align-items: flex-start; }
     .table { min-width: 560px; }
+    
+    /* Office locations specific */
+    .office-locations-map { height: 300px !important; }
+    .location-form-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 767.98px) {
@@ -556,6 +560,20 @@ img, video, canvas, svg { max-width: 100%; }
     .salary-card .breakdown { grid-template-columns: 1fr 1fr; gap: 12px; }
     .employee-row-actions, td .d-flex.gap-2 { flex-wrap: wrap; }
     .table { min-width: 520px; }
+    
+    /* Office locations table */
+    .office-locations-table th:nth-child(3),
+    .office-locations-table td:nth-child(3),
+    .office-locations-table th:nth-child(4),
+    .office-locations-table td:nth-child(4) { display: none; }
+    
+    /* Form improvements */
+    .form-row { grid-template-columns: 1fr; }
+    .card-body { padding: 16px; }
+    .card-header { padding: 14px 16px; }
+    
+    /* Map height */
+    .office-locations-map { height: 280px !important; }
 }
 
 @media (max-width: 575.98px) {
@@ -580,6 +598,133 @@ img, video, canvas, svg { max-width: 100%; }
     .btn { justify-content: center; }
     .btn-group-mobile-stack { display: flex; flex-direction: column; gap: .5rem; }
     .btn-group-mobile-stack .btn { width: 100%; }
+    
+    /* Office locations - further mobile optimizations */
+    .office-locations-table th:nth-child(2),
+    .office-locations-table td:nth-child(2) { display: none; }
+    .office-locations-map { height: 250px !important; }
+    .table-responsive { border-radius: 12px; }
+    .card { border-radius: 14px; }
+    
+    /* Form spacing */
+    .row.g-3 > * { padding-left: 0; padding-right: 0; }
+    .row.g-3 { margin-left: 0; margin-right: 0; }
+    
+    /* Button stacking */
+    .d-flex.gap-2 { flex-direction: column; width: 100%; }
+    .d-flex.gap-2 .btn,
+    .d-flex.gap-2 .btn-soft,
+    .d-flex.gap-2 .btn-outline-primary { width: 100%; }
+    
+    /* Settings card */
+    .sidebar .card { margin-top: 1rem; }
+    .sidebar .card-body { padding: 14px; }
+    .sidebar .card-header { padding: 12px 14px; }
+}
+
+/* Tablet landscape / small laptop */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .office-locations-map { height: 320px !important; }
+    .stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* Large desktop */
+@media (min-width: 1400px) {
+    .content { padding: 16px 48px 48px; }
+    .topbar { padding: 24px 48px 14px; }
+    .stat-grid { gap: 24px; }
+    .card-body { padding: 28px; }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+    .btn, .form-control, .form-select { min-height: 48px; }
+    .nav-link { padding: 14px 16px; }
+    .table tbody td { padding: 16px; }
+    .card-header { padding: 16px 20px; }
+    
+    /* Better tap targets for map */
+    .office-locations-map { touch-action: pan-x pan-y; }
+}
+
+/* High DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .avatar, .student-photo, .avatar-photo { image-rendering: -webkit-optimize-contrast; }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Print styles */
+@media print {
+    .sidebar, .topbar, .sidebar-overlay, .btn, .card-header .d-flex, .filter-bar { display: none !important; }
+    .main-wrap { margin-left: 0; }
+    .content { padding: 0; }
+    .card { box-shadow: none; border: 1px solid #ccc; }
+    .table { min-width: 100%; }
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+    outline: 2px solid var(--purple-500);
+    outline-offset: 2px;
+}
+
+/* Container queries support (modern browsers) */
+@supports (container-type: inline-size) {
+    .card { container-type: inline-size; }
+    @container (max-width: 400px) {
+        .card-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+        .card-header > * { width: 100%; }
+    }
+}
+
+/* Utility classes for responsive behavior */
+.d-flex-responsive { display: flex; flex-wrap: wrap; gap: 8px; }
+@media (max-width: 575.98px) {
+    .d-flex-responsive { flex-direction: column; }
+    .d-flex-responsive > * { width: 100%; }
+}
+
+.grid-auto-fit { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+@media (max-width: 575.98px) {
+    .grid-auto-fit { grid-template-columns: 1fr; }
+}
+
+.hide-on-mobile { display: block; }
+@media (max-width: 767.98px) {
+    .hide-on-mobile { display: none; }
+}
+
+.hide-on-desktop { display: none; }
+@media (max-width: 767.98px) {
+    .hide-on-desktop { display: block; }
+}
+
+.text-responsive { font-size: clamp(0.85rem, 2vw, 1rem); }
+.heading-responsive { font-size: clamp(1.1rem, 3vw, 1.5rem); }
+
+/* Office Locations specific responsive */
+.locations-form .row > * { min-width: 0; }
+@media (max-width: 575.98px) {
+    .locations-form .row { margin: 0; }
+    .locations-form .row > * { padding: 0; }
+}
+
+.locations-table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.locations-table-container table { min-width: 600px; }
+@media (max-width: 767.98px) {
+    .locations-table-container table { min-width: 500px; }
+}
+@media (max-width: 575.98px) {
+    .locations-table-container table { min-width: 450px; font-size: 0.82rem; }
 }
 
 @media (hover: none) {

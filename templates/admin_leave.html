@@ -11,27 +11,29 @@
     </div>
     <div class="card-body p-0">
         {% if leaves %}
-        <div class="table-responsive">
-            <table class="table mb-0">
+        <div class="table-responsive admin-leave-table-container">
+            <table class="table mb-0 admin-leave-table">
                 <thead>
-                    <tr><th>Employee</th><th>Dates</th><th>Days</th><th>Reason</th><th>Status</th><th class="text-end">Action</th></tr>
+                    <tr><th>Employee</th><th class="hide-on-mobile">Dates</th><th class="hide-on-mobile">Days</th><th>Reason</th><th>Status</th><th class="text-end">Action</th></tr>
                 </thead>
                 <tbody>
                     {% for leave in leaves %}
                     <tr>
                         <td>{{ leave.employee.name }} <div class="text-muted-2 small">{{ leave.employee.employee_code }}</div></td>
-                        <td>{{ leave.start_date }} to {{ leave.end_date }}</td>
-                        <td>{{ leave.days }}</td>
+                        <td class="hide-on-mobile">{{ leave.start_date }} to {{ leave.end_date }}</td>
+                        <td class="hide-on-mobile">{{ leave.days }}</td>
                         <td>{{ leave.reason or '—' }}</td>
                         <td><span class="badge-soft {{ 'present' if leave.status == 'approved' else ('danger' if leave.status == 'rejected' else 'amber') }}"><span class="dot"></span> {{ leave.status|capitalize }}</span></td>
                         <td class="text-end">
                             {% if leave.status == 'pending' %}
-                            <form method="POST" action="{{ url_for('admin_leave_action', leave_id=leave.id, action='approve') }}" style="display:inline;" onsubmit="return confirm('Approve karna hai?');">
-                                <button class="btn btn-sm btn-success">Approve</button>
-                            </form>
-                            <form method="POST" action="{{ url_for('admin_leave_action', leave_id=leave.id, action='reject') }}" style="display:inline; margin-left:6px;" onsubmit="return confirm('Reject karna hai?');">
-                                <button class="btn btn-sm btn-danger">Reject</button>
-                            </form>
+                            <div class="d-flex-responsive gap-2 justify-content-end">
+                                <form method="POST" action="{{ url_for('admin_leave_action', leave_id=leave.id, action='approve') }}" style="display:inline;" onsubmit="return confirm('Approve karna hai?');">
+                                    <button class="btn btn-sm btn-success w-100">Approve</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin_leave_action', leave_id=leave.id, action='reject') }}" style="display:inline;" onsubmit="return confirm('Reject karna hai?');">
+                                    <button class="btn btn-sm btn-danger w-100">Reject</button>
+                                </form>
+                            </div>
                             {% else %}
                             <span class="text-muted-2 small">Reviewed</span>
                             {% endif %}

@@ -104,7 +104,7 @@
                                     <form method="POST" action="{{ url_for('delete_location', loc_id=loc.id) }}" style="display:inline; margin-left:6px;" onsubmit="return confirm('Location delete karna hai?');">
                                         <button class="btn btn-sm btn-outline-purple"><i class="bi bi-trash"></i></button>
                                     </form>
-                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="centerMapOnLocation({{ loc.latitude }}, {{ loc.longitude }}, '{{ loc.name | replace(\"'\", \"\\'\") }}')">
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="centerMapOnLocation({{ loc.latitude }}, {{ loc.longitude }}, {{ loc.name | tojson }})">
                                         <i class="bi bi-map"></i> Show
                                     </button>
                                 </td>

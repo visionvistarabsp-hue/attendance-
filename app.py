@@ -287,6 +287,16 @@ class OfficeLocation(db.Model):
     def display(self):
         return f"{self.name} ({self.radius_meters}m)"
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'latitude': self.latitude,
+            'longitude': self.longitude,
+            'radius_meters': self.radius_meters,
+            'is_active': self.is_active,
+        }
+
 
 # ---------------------------------------------------------------------------
 # Leave requests
@@ -1522,6 +1532,7 @@ def admin_locations():
     return render_template(
         'office_locations.html',
         locations=locations,
+        locations_json=[loc.to_dict() for loc in locations],
         MAX_LOCATIONS=MAX_LOCATIONS,
     )
 

@@ -29,8 +29,6 @@
                         <div class="card-body">
                             <label class="form-label d-block mb-2">Google Maps se Location Chunein <span class="text-muted-2 fw-normal">(ya neeche manual lat/lng bharein)</span></label>
                             <div id="map" style="height: 340px; border-radius: 14px; border: 1px solid var(--line); background: #fff;"></div>
-                            <input type="hidden" id="picked_lat" name="latitude" value="">
-                            <input type="hidden" id="picked_lng" name="longitude" value="">
                             <div class="form-text mt-2">Map par click karein ya marker drag karein — lat/lng auto fill ho jayega.</div>
                             <div class="row g-3 mt-3">
                                 <div class="col-md-6">
@@ -150,11 +148,11 @@
         });
 
         // Saved locations ke markers aur radius circle dikhayein
-        const locations = {{ locations | tojson }};
+        const locations = {{ locations_json | tojson }};
         locations.forEach(loc => {
-            const marker = L.marker([loc.latitude, loc.longitude]).addTo(map);
-            marker.bindPopup(`<b>${loc.name}</b><br>Radius: ${loc.radius_meters} m`);
-            savedMarkers.push(marker);
+            const m = L.marker([loc.latitude, loc.longitude]).addTo(map);
+            m.bindPopup('<b>' + loc.name + '</b><br>Radius: ' + loc.radius_meters + ' m');
+            savedMarkers.push(m);
 
             // Radius circle
             L.circle([loc.latitude, loc.longitude], {
@@ -171,9 +169,8 @@
             map.setView([first.latitude, first.longitude], 16);
         }
     }
+
     function fillCoords(lat, lng) {
-        document.getElementById('picked_lat').value = lat.toFixed(6);
-        document.getElementById('picked_lng').value = lng.toFixed(6);
         document.getElementById('manual_lat').value = lat.toFixed(6);
         document.getElementById('manual_lng').value = lng.toFixed(6);
     }
@@ -183,7 +180,7 @@
     function centerMapOnLocation(lat, lng, name) {
         map.setView([lat, lng], 16);
         map.closePopup();
-        L.marker([lat, lng]).addTo(map).bindPopup(`<b>${name}</b>`).openPopup();
+        L.marker([lat, lng]).addTo(map).bindPopup('<b>' + name + '</b>').openPopup();
     }
 
     function getMyLocation() {
@@ -204,8 +201,6 @@
                 const lng = pos.coords.longitude;
                 document.getElementById('manual_lat').value = lat.toFixed(6);
                 document.getElementById('manual_lng').value = lng.toFixed(6);
-                document.getElementById('picked_lat').value = lat.toFixed(6);
-                document.getElementById('picked_lng').value = lng.toFixed(6);
                 if (marker) {
                     marker.setLatLng([lat, lng]);
                     map.panTo([lat, lng]);

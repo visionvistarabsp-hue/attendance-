@@ -30,6 +30,13 @@
                     </div>
                     <div class="scan-line" id="scanLine" style="display:none;"></div>
                 </div>
+
+                <div id="locationStatus" class="location-status mb-3" style="display:none;">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span id="locationText">Location fetch ho raha hai...</span>
+                    <span id="locationBadge" class="badge ms-2"></span>
+                </div>
+
                 <canvas id="canvas" class="d-none"></canvas>
 
                 <div id="statusBox" class="status-banner {{ 'success' if checked_in and checked_out else '' }}">
@@ -154,11 +161,36 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    async function getLocation() {
+        return new Promise((resolve) => {
+            if (!navigator.geolocation) {
+                resolve(null);
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                () => resolve(null),
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+    }
+
     async function postAttendance(payload) {
         if (busy) return;
         busy = true;
         [captureInBtn, captureOutBtn, manualInBtn, manualOutBtn].forEach(b => b && (b.disabled = true));
         try {
+            const loc = await getLocation();
+            if (loc) {
+                payload.lat = loc.lat;
+                payload.lng = loc.lng;
+                const box = document.getElementById('locationStatus');
+                const text = document.getElementById('locationText');
+                const badge = document.getElementById('locationBadge');
+                if (box) { box.style.display = 'flex'; }
+                if (text) { text.textContent = `Location: ${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`; }
+                if (badge) { badge.className = 'badge ms-2 bg-info text-dark'; badge.textContent = 'Location mila'; }
+            }
             const res = await fetch('{{ url_for("mark_attendance") }}', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

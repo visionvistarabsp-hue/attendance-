@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Notice Requests - Attently{% endblock %}
+{% block page_title %}All Notice Requests{% endblock %}
+{% block page_subtitle %}Sabhi employees ki notice period requests approve ya reject karein{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h5><i class="bi bi-door-open me-2 text-primary"></i>Notice Period Requests Manage Karein</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if notices %}
+        <div class="table-responsive">
+            <table class="table mb-0">
+                <thead>
+                    <tr><th>Employee</th><th>Period</th><th>Days</th><th>Reason</th><th>Status</th><th class="text-end">Action</th></tr>
+                </thead>
+                <tbody>
+                    {% for notice in notices %}
+                    <tr>
+                        <td>{{ notice.employee.name }} <div class="text-muted-2 small">{{ notice.employee.employee_code }}</div></td>
+                        <td>{{ notice.notice_start }} to {{ notice.notice_end }}</td>
+                        <td>{{ notice.days }} days</td>
+                        <td>{{ notice.reason or '—' }}</td>
+                        <td><span class="badge-soft {{ 'present' if notice.status == 'approved' else ('danger' if notice.status == 'rejected' else 'amber') }}"><span class="dot"></span> {{ notice.status|capitalize }}</span></td>
+                        <td class="text-end">
+                            {% if notice.status == 'pending' %}
+                            <form method="POST" action="{{ url_for('admin_notice_action', notice_id=notice.id, action='approve') }}" style="display:inline;" onsubmit="return confirm('Approve karna hai?');">
+                                <button class="btn btn-sm btn-success">Approve</button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin_notice_action', notice_id=notice.id, action='reject') }}" style="display:inline; margin-left:6px;" onsubmit="return confirm('Reject karna hai?');">
+                                <button class="btn btn-sm btn-danger">Reject</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted-2 small">Reviewed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state py-4"><i class="bi bi-inbox"></i><h5>Koi notice request nahi</h5><p>Employees notice apply karenge to yahan dikhega.</p></div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

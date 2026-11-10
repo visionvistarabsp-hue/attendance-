@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Office Locations - Attently{% endblock %}
+{% block page_title %}Office Locations{% endblock %}
+{% block page_subtitle %}Adhiktam 5 office locations aur unka radius (meter) set karein{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-geo-alt-fill me-2 text-primary"></i>Nayi Office Location Jodein</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('admin_locations') }}">
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <label class="form-label">Location Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" placeholder="e.g. Head Office, Connaught Place" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Radius (Meter) <span class="text-danger">*</span></label>
+                            <input type="number" class="form-control" name="radius_meters" value="100" min="10" placeholder="100" required>
+                            <div class="form-text">User isse do meter ke andar hona chahiye.</div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <label class="form-label d-block mb-2">Google Maps se Location Chunein <span class="text-muted-2 fw-normal">(ya neeche manual lat/lng bharein)</span></label>
+                            <div id="map" style="height: 340px; border-radius: 14px; border: 1px solid var(--line); background: #fff;"></div>
+                            <input type="hidden" id="picked_lat" name="latitude" value="">
+                            <input type="hidden" id="picked_lng" name="longitude" value="">
+                            <div class="form-text mt-2">Map par click karein ya marker drag karein — lat/lng auto fill ho jayega.</div>
+                            <div class="row g-3 mt-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Latitude <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="manual_lat" name="latitude" placeholder="e.g. 28.6139" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Longitude <span class="text-danger">*</span></label>
+                                    <input type="text" class="form-control" id="manual_lng" name="longitude" placeholder="e.g. 77.2090" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-geo-alt"></i> Location Save Karein</button>
+                        <a href="{{ url_for('dashboard') }}" class="btn btn-soft">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-list me-2 text-primary"></i>Settings</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted-2 small">Adhiktam <strong>{{ MAX_LOCATIONS }}</strong> office locations add ki ja sakti hain.</p>
+                <p class="text-muted-2 small">Vartaman: <strong>{{ locations|length }}</strong> locations</p>
+                <hr>
+                <ul class="text-muted-2 ps-3 mb-0 small" style="line-height: 1.8;">
+                    <li>Admin Google Maps se location pick karega.</li>
+                    <li>Radius meter mein set hoga (default 100m).</li>
+                    <li>Employee sirf usi radius ke andar attendance mark kar payega.</li>
+                    <li>Location on/off ya delete ki ja sakti hai.</li>
+                </ul>
+            </div>
+        </div>
+        {% if locations %}
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="bi bi-buildings me-2 text-primary"></i>Saved Locations</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table mb-0">
+                        <thead>
+                            <tr><th>Name</th><th>Lat / Lng</th><th>Radius</th><th>Status</th><th class="text-end">Action</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for loc in locations %}
+                            <tr>
+                                <td>{{ loc.name }}</td>
+                                <td>{{ '%.4f'|format(loc.latitude) }} / {{ '%.4f'|format(loc.longitude) }}</td>
+                                <td>{{ loc.radius_meters }} m</td>
+                                <td><span class="badge-soft {{ 'present' if loc.is_active else 'amber' }}"><span class="dot"></span> {{ 'Active' if loc.is_active else 'Inactive' }}</span></td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ url_for('toggle_location', loc_id=loc.id) }}" style="display:inline;" onsubmit="return confirm('Location {{ 'deactivate' if loc.is_active else 'activate' }} karna hai?');">
+                                        <button class="btn btn-sm btn-soft">{{ 'Deactivate' if loc.is_active else 'Activate' }}</button>
+                                    </form>
+                                    <form method="POST" action="{{ url_for('delete_location', loc_id=loc.id) }}" style="display:inline; margin-left:6px;" onsubmit="return confirm('Location delete karna hai?');">
+                                        <button class="btn btn-sm btn-outline-purple"><i class="bi bi-trash"></i></button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    let map, marker;
+    function initMap() {
+        const defaultCenter = [28.6139, 77.2090];
+        map = L.map('map').setView(defaultCenter, 15);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors',
+            maxZoom: 19
+        }).addTo(map);
+
+        marker = L.marker(defaultCenter, { draggable: true }).addTo(map);
+        fillCoords(defaultCenter[0], defaultCenter[1]);
+
+        map.on('click', (e) => {
+            marker.setLatLng(e.latlng);
+            map.panTo(e.latlng);
+            fillCoords(e.latlng.lat, e.latlng.lng);
+        });
+
+        marker.on('dragend', (e) => {
+            const pos = e.target.getLatLng();
+            map.panTo(pos);
+            fillCoords(pos.lat, pos.lng);
+        });
+    }
+    function fillCoords(lat, lng) {
+        document.getElementById('picked_lat').value = lat.toFixed(6);
+        document.getElementById('picked_lng').value = lng.toFixed(6);
+        document.getElementById('manual_lat').value = lat.toFixed(6);
+        document.getElementById('manual_lng').value = lng.toFixed(6);
+    }
+
+    document.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}

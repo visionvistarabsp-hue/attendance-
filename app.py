@@ -33,7 +33,7 @@ from flask_login import (
 )
 from flask_sqlalchemy import SQLAlchemy
 from PIL import Image, ImageOps
-from sqlalchemy import event, or_
+from sqlalchemy import event, func, or_
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.pool import NullPool
@@ -218,6 +218,12 @@ class Employee(db.Model):
         cascade='all, delete-orphan',
         order_by='Attendance.date.desc()',
     )
+    leave_requests = db.relationship(
+        'LeaveRequest', back_populates='employee', cascade='all, delete-orphan'
+    )
+    notice_requests = db.relationship(
+        'NoticeRequest', back_populates='employee', cascade='all, delete-orphan'
+    )
 
     @property
     def photo_url(self):
@@ -245,8 +251,12 @@ class Attendance(db.Model):
     out_method = db.Column(db.String(20), default='')
     status = db.Column(db.String(20), default='Present', nullable=False)
     method = db.Column(db.String(20), default='manual', nullable=False)
+    check_in_lat = db.Column(db.String(40), default='')
+    check_in_lng = db.Column(db.String(40), default='')
+    location_id = db.Column(db.Integer, db.ForeignKey('office_locations.id', ondelete='SET NULL'), nullable=True)
 
     employee = db.relationship('Employee', back_populates='attendances')
+    location = db.relationship('OfficeLocation', back_populates='attendances')
 
     @property
     def check_in_time(self):
@@ -255,6 +265,97 @@ class Attendance(db.Model):
     @property
     def check_out_time(self):
         return self.out_time or ''
+
+
+# ---------------------------------------------------------------------------
+# Office locations (geofencing)
+# ---------------------------------------------------------------------------
+class OfficeLocation(db.Model):
+    __tablename__ = 'office_locations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), nullable=False)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    radius_meters = db.Column(db.Integer, default=100, nullable=False)
+    is_active = db.Column(db.Boolean, default=True, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: now_ist())
+
+    attendances = db.relationship('Attendance', back_populates='location')
+
+    @property
+    def display(self):
+        return f"{self.name} ({self.radius_meters}m)"
+
+
+# ---------------------------------------------------------------------------
+# Leave requests
+# ---------------------------------------------------------------------------
+class LeaveRequest(db.Model):
+    __tablename__ = 'leave_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(
+        db.Integer, db.ForeignKey('employees.id', ondelete='CASCADE'), nullable=False, index=True
+    )
+    start_date = db.Column(db.Date, nullable=False)
+    end_date = db.Column(db.Date, nullable=False)
+    reason = db.Column(db.Text, default='')
+    status = db.Column(db.String(20), default='pending', nullable=False)  # pending|approved|rejected
+    admin_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    admin_note = db.Column(db.String(255), default='')
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: now_ist())
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    employee = db.relationship('Employee', back_populates='leave_requests')
+    admin = db.relationship('User')
+
+    @property
+    def days(self):
+        return (self.end_date - self.start_date).days + 1
+
+    @property
+    def status_badge(self):
+        return {
+            'pending': ('amber', 'Pending'),
+            'approved': ('success', 'Approved'),
+            'rejected': ('danger', 'Rejected'),
+        }.get(self.status, ('amber', 'Pending'))
+
+
+# ---------------------------------------------------------------------------
+# Notice period requests
+# ---------------------------------------------------------------------------
+class NoticeRequest(db.Model):
+    __tablename__ = 'notice_requests'
+
+    id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(
+        db.Integer, db.ForeignKey('employees.id', ondelete='CASCADE'), nullable=False, index=True
+    )
+    notice_start = db.Column(db.Date, nullable=False)
+    notice_end = db.Column(db.Date, nullable=False)
+    reason = db.Column(db.Text, default='')
+    status = db.Column(db.String(20), default='pending', nullable=False)  # pending|approved|rejected
+    admin_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    admin_note = db.Column(db.String(255), default='')
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: now_ist())
+    reviewed_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
+    employee = db.relationship('Employee', back_populates='notice_requests')
+    admin = db.relationship('User')
+
+    @property
+    def days(self):
+        return (self.notice_end - self.notice_start).days + 1
+
+    @property
+    def status_badge(self):
+        return {
+            'pending': ('amber', 'Pending'),
+            'approved': ('success', 'Approved'),
+            'rejected': ('danger', 'Rejected'),
+        }.get(self.status, ('amber', 'Pending'))
 
 
 # ---------------------------------------------------------------------------
@@ -372,6 +473,14 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Please login to continue.'
 login_manager.login_message_category = 'info'
+login_manager.session_protection = 'strong'
+
+# Remember-me cookie 30 days tak valid rahega taaki baar-baar login na karna pade
+app.config['REMEMBER_COOKIE_DURATION'] = 30 * 24 * 60 * 60  # 30 days
+app.config['REMEMBER_COOKIE_SECURE'] = False
+app.config['REMEMBER_COOKIE_HTTPONLY'] = True
+app.config['REMEMBER_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 30 * 24 * 60 * 60  # 30 days
 
 
 @login_manager.user_loader
@@ -431,6 +540,12 @@ def ensure_schema_migrations():
             db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_timestamp TIMESTAMPTZ"))
         if 'out_method' not in names:
             db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_method VARCHAR(20) DEFAULT ''"))
+        if 'check_in_lat' not in names:
+            db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN check_in_lat VARCHAR(40) DEFAULT ''"))
+        if 'check_in_lng' not in names:
+            db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN check_in_lng VARCHAR(40) DEFAULT ''"))
+        if 'location_id' not in names:
+            db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN location_id INTEGER REFERENCES office_locations(id) ON DELETE SET NULL"))
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -443,9 +558,35 @@ def ensure_schema_migrations():
                 db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_timestamp DATETIME"))
             if 'out_method' not in names:
                 db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN out_method VARCHAR(20) DEFAULT ''"))
+            if 'check_in_lat' not in names:
+                db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN check_in_lat VARCHAR(40) DEFAULT ''"))
+            if 'check_in_lng' not in names:
+                db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN check_in_lng VARCHAR(40) DEFAULT ''"))
+            if 'location_id' not in names:
+                db.session.execute(db.text("ALTER TABLE attendance ADD COLUMN location_id INTEGER"))
             db.session.commit()
         except Exception:
             db.session.rollback()
+
+
+def _table_exists(table_name):
+    try:
+        if db.engine.dialect.name == 'sqlite':
+            rows = db.session.execute(db.text("SELECT name FROM sqlite_master WHERE type='table' AND name=:t"), {'t': table_name}).fetchall()
+        else:
+            rows = db.session.execute(db.text("SELECT table_name FROM information_schema.tables WHERE table_name=:t"), {'t': table_name}).fetchall()
+        return bool(rows)
+    except Exception:
+        return False
+
+
+def _ensure_new_tables():
+    """Create new tables for geofencing, leaves and notice periods if missing."""
+    try:
+        db.create_all()
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
 
 
 def ensure_default_admin():
@@ -573,6 +714,94 @@ def salary_for(employee, present_days, period_days):
     }
 
 
+# ---------------------------------------------------------------------------
+# Geofencing helpers
+# ---------------------------------------------------------------------------
+def _haversine(lat1, lon1, lat2, lon2):
+    """Distance in meters between two lat/lng points."""
+    try:
+        lat1, lon1, lat2, lon2 = float(lat1), float(lon1), float(lat2), float(lon2)
+    except (TypeError, ValueError):
+        return None
+    import math
+    r = 6371000.0
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dphi / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return 2 * r * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+
+def active_locations():
+    return list(
+        db.session.execute(
+            db.select(OfficeLocation).where(OfficeLocation.is_active == True).order_by(OfficeLocation.name)
+        ).scalars()
+    )
+
+
+def location_within_radius(location, lat, lng):
+    """Return (distance_meters, is_inside) or (None, False) when coords invalid."""
+    if location is None or lat is None or lng is None:
+        return None, False
+    d = _haversine(location.latitude, location.longitude, lat, lng)
+    if d is None:
+        return None, False
+    return d, d <= float(location.radius_meters)
+
+
+def nearest_location(lat, lng):
+    """Return (location, distance, is_inside) for the closest active location."""
+    best = None
+    for loc in active_locations():
+        d, inside = location_within_radius(loc, lat, lng)
+        if d is None:
+            continue
+        if best is None or d < best[1]:
+            best = (loc, d, inside)
+    return best if best else (None, None, False)
+
+
+def on_leave_today(employee_id, date=None):
+    """True if employee has an approved leave covering the given date."""
+    date = date or today_date()
+    req = db.session.execute(
+        db.select(LeaveRequest).where(
+            LeaveRequest.employee_id == employee_id,
+            LeaveRequest.status == 'approved',
+            LeaveRequest.start_date <= date,
+            LeaveRequest.end_date >= date,
+        )
+    ).scalar_one_or_none()
+    return req
+
+
+def notice_active_today(employee_id, date=None):
+    """Return active approved notice request covering the given date, or None."""
+    date = date or today_date()
+    return db.session.execute(
+        db.select(NoticeRequest).where(
+            NoticeRequest.employee_id == employee_id,
+            NoticeRequest.status == 'approved',
+            NoticeRequest.notice_start <= date,
+            NoticeRequest.notice_end >= date,
+        )
+    ).scalar_one_or_none()
+
+
+def can_mark_today(employee_id, date=None):
+    """Return (allowed, reason). Leaves override notice for attendance blocking."""
+    date = date or today_date()
+    leave = on_leave_today(employee_id, date)
+    if leave:
+        return False, 'Aap approved leave par hain — attendance mark nahi karni.'
+    notice = notice_active_today(employee_id, date)
+    if notice:
+        return False, f"Aap notice period ({notice.notice_start} se {notice.notice_end}) me hain — attendance mark nahi karni."
+    return True, ''
+
+
 def mark_present(employee, method='manual'):
     """Create today's attendance record once. Returns (created, record)."""
     today = today_date()
@@ -648,11 +877,12 @@ def login():
     if request.method == 'POST':
         identifier = (request.form.get('username') or '').strip()
         password = request.form.get('password') or ''
+        remember = bool(request.form.get('remember'))
         user = db.session.execute(
             db.select(User).where(or_(User.username == identifier, User.email == identifier))
         ).scalar_one_or_none()
         if user and user.check_password(password):
-            login_user(user)
+            login_user(user, remember=remember)
             flash(f"Welcome back, {user.username}!", 'success')
             return redirect(url_for('dashboard'))
         flash('Username/email ya password galat hai.', 'error')
@@ -1012,6 +1242,7 @@ def mark_attendance_page():
         'mark_attendance.html',
         employee=employee,
         today_record=today_record,
+        locations=active_locations(),
         records=records,
     )
 
@@ -1023,11 +1254,41 @@ def mark_attendance():
     if not employee:
         return jsonify({'success': False, 'message': 'Employee record nahi mila.'}), 404
 
+    # Leave ya notice period me attendance block karein
+    allowed, reason = can_mark_today(employee.id)
+    if not allowed:
+        return jsonify({'success': False, 'message': reason}), 403
+
     payload = request.get_json(silent=True) or {}
     action = (payload.get('action') or 'in').strip().lower()
     if action not in ('in', 'out'):
         return jsonify({'success': False, 'message': 'Invalid attendance action.'}), 400
     method = 'manual'
+
+    # ---------- Geofencing (sirf check-in par enforce hota hai) ----------
+    lat = lng = None
+    location_id = None
+    locations = active_locations()
+    if locations:
+        try:
+            lat = float(payload.get('lat')) if payload.get('lat') not in (None, '') else None
+            lng = float(payload.get('lng')) if payload.get('lng') not in (None, '') else None
+        except (TypeError, ValueError):
+            lat = lng = None
+        if lat is None or lng is None:
+            return jsonify({
+                'success': False,
+                'message': 'Attendance ke liye location access zaroori hai. Browser se location permission dein aur dobara koshish karein.',
+            }), 400
+        nearest, distance, inside = nearest_location(lat, lng)
+        if not inside:
+            return jsonify({
+                'success': False,
+                'message': f'Aap office location ke radius ke bahar hain ({distance:.0f} meter door). Sirf office ke andar se attendance mark kar sakte hain.',
+                'outside_radius': True,
+                'distance': round(distance, 1),
+            }), 400
+        location_id = nearest.id if nearest else None
 
     if not payload.get('manual'):
         image_data = payload.get('image')
@@ -1080,6 +1341,13 @@ def mark_attendance():
                 'action': 'in',
             }
         )
+
+    # Check-in location save karein
+    if lat is not None:
+        record.check_in_lat = str(lat)
+        record.check_in_lng = str(lng)
+    record.location_id = location_id
+    db.session.commit()
 
     return jsonify(
         {
@@ -1235,6 +1503,238 @@ def delete_attendance(record_id):
     db.session.delete(record)
     db.session.commit()
     return jsonify({'success': True, 'message': 'Attendance record delete ho gaya.'})
+
+
+# --------------------------------------------------------------------------- #
+# Office locations (admin — geofencing, max 5)
+# --------------------------------------------------------------------------- #
+MAX_LOCATIONS = 5
+
+
+@app.route('/admin/locations', methods=['GET'])
+@admin_required
+def admin_locations():
+    locations = list(
+        db.session.execute(
+            db.select(OfficeLocation).order_by(OfficeLocation.name)
+        ).scalars()
+    )
+    return render_template(
+        'office_locations.html',
+        locations=locations,
+        MAX_LOCATIONS=MAX_LOCATIONS,
+    )
+
+
+@app.route('/admin/locations', methods=['POST'])
+@admin_required
+def add_location():
+    name = (request.form.get('name') or '').strip()
+    lat_raw = (request.form.get('latitude') or '').strip()
+    lng_raw = (request.form.get('longitude') or '').strip()
+    radius_raw = (request.form.get('radius_meters') or '100').strip()
+
+    if not name or not lat_raw or not lng_raw:
+        flash('Name, latitude aur longitude sab zaroori hain.', 'error')
+        return redirect(url_for('admin_locations'))
+    try:
+        latitude = float(lat_raw)
+        longitude = float(lng_raw)
+        radius = int(radius_raw)
+        if not (-90 <= latitude <= 90 and -180 <= longitude <= 180):
+            raise ValueError
+        if radius <= 0:
+            raise ValueError
+    except ValueError:
+        flash('Valid latitude, longitude aur radius (meter) dalein.', 'error')
+        return redirect(url_for('admin_locations'))
+
+    count = db.session.execute(db.select(db.func.count(OfficeLocation.id))).scalar() or 0
+    if count >= MAX_LOCATIONS:
+        flash(f'Adhiktam {MAX_LOCATIONS} office locations add ki ja sakti hain.', 'error')
+        return redirect(url_for('admin_locations'))
+
+    loc = OfficeLocation(
+        name=name,
+        latitude=latitude,
+        longitude=longitude,
+        radius_meters=radius,
+        is_active=True,
+    )
+    db.session.add(loc)
+    db.session.commit()
+    flash(f'Location "{name}" add ho gayi ({radius}m radius).', 'success')
+    return redirect(url_for('admin_locations'))
+
+
+@app.route('/admin/locations/<int:loc_id>/toggle', methods=['POST'])
+@admin_required
+def toggle_location(loc_id):
+    loc = db.session.get(OfficeLocation, loc_id)
+    if not loc:
+        flash('Location nahi mila.', 'error')
+        return redirect(url_for('admin_locations'))
+    loc.is_active = not loc.is_active
+    db.session.commit()
+    flash(f'Location {"active" if loc.is_active else "inactive"} ho gayi.', 'success')
+    return redirect(url_for('admin_locations'))
+
+
+@app.route('/admin/locations/<int:loc_id>/delete', methods=['POST'])
+@admin_required
+def delete_location(loc_id):
+    loc = db.session.get(OfficeLocation, loc_id)
+    if not loc:
+        flash('Location nahi mila.', 'error')
+        return redirect(url_for('admin_locations'))
+    db.session.delete(loc)
+    db.session.commit()
+    flash('Location delete ho gayi.', 'success')
+    return redirect(url_for('admin_locations'))
+
+
+# --------------------------------------------------------------------------- #
+# Leave requests
+# --------------------------------------------------------------------------- #
+@app.route('/leave', methods=['GET', 'POST'])
+@login_required
+def leave_page():
+    employee = get_employee(current_user.employee_id)
+    if not employee:
+        flash('Employee record nahi mila.', 'error')
+        return redirect(url_for('logout'))
+
+    if request.method == 'POST':
+        start_date = parse_date(request.form.get('start_date'), None)
+        end_date = parse_date(request.form.get('end_date'), None)
+        reason = (request.form.get('reason') or '').strip()
+        if not start_date or not end_date:
+            flash('Start aur end date dono zaroori hain.', 'error')
+        elif end_date < start_date:
+            flash('End date start date se pehle nahi ho sakti.', 'error')
+        else:
+            req = LeaveRequest(
+                employee_id=employee.id,
+                start_date=start_date,
+                end_date=end_date,
+                reason=reason,
+            )
+            db.session.add(req)
+            db.session.commit()
+            flash('Leave request bhej di gayi. Admin approval ka intezar karein.', 'success')
+            return redirect(url_for('leave_page'))
+
+    my_leaves = list(
+        db.session.execute(
+            db.select(LeaveRequest)
+            .where(LeaveRequest.employee_id == employee.id)
+            .order_by(LeaveRequest.created_at.desc())
+        ).scalars()
+    )
+    return render_template('leave.html', employee=employee, my_leaves=my_leaves)
+
+
+@app.route('/admin/leave', methods=['GET'])
+@admin_required
+def admin_leave():
+    leaves = list(
+        db.session.execute(db.select(LeaveRequest).order_by(LeaveRequest.created_at.desc())).scalars()
+    )
+    return render_template('admin_leave.html', leaves=leaves)
+
+
+@app.route('/admin/leave/<int:leave_id>/<action>', methods=['POST'])
+@admin_required
+def admin_leave_action(leave_id, action):
+    if action not in ('approve', 'reject'):
+        flash('Invalid action.', 'error')
+        return redirect(url_for('admin_leave'))
+    req = db.session.get(LeaveRequest, leave_id)
+    if not req:
+        flash('Leave request nahi mila.', 'error')
+        return redirect(url_for('admin_leave'))
+    req.status = 'approved' if action == 'approve' else 'rejected'
+    req.admin_id = current_user.id
+    req.reviewed_at = now_ist()
+    req.admin_note = (request.form.get('note') or '').strip()
+    db.session.commit()
+    flash(f'Leave request {req.status}.', 'success')
+    return redirect(url_for('admin_leave'))
+
+
+# --------------------------------------------------------------------------- #
+# Notice period requests
+# --------------------------------------------------------------------------- #
+@app.route('/notice', methods=['GET', 'POST'])
+@login_required
+def notice_page():
+    employee = get_employee(current_user.employee_id)
+    if not employee:
+        flash('Employee record nahi mila.', 'error')
+        return redirect(url_for('logout'))
+
+    if request.method == 'POST':
+        start_date = parse_date(request.form.get('notice_start'), None)
+        months_raw = (request.form.get('notice_months') or '').strip()
+        reason = (request.form.get('reason') or '').strip()
+        if not start_date or not months_raw:
+            flash('Notice start date aur notice period (months) zaroori hain.', 'error')
+            return redirect(url_for('notice_page'))
+        try:
+            months = int(months_raw)
+            if months <= 0:
+                raise ValueError
+        except ValueError:
+            flash('Notice period ek valid number (months me) hona chahiye.', 'error')
+            return redirect(url_for('notice_page'))
+        notice_end = start_date + timedelta(days=months * 30)
+        req = NoticeRequest(
+            employee_id=employee.id,
+            notice_start=start_date,
+            notice_end=notice_end,
+            reason=reason,
+        )
+        db.session.add(req)
+        db.session.commit()
+        flash(f'Notice period request bhej di gayi ({months} month). Admin approval ka intezar karein.', 'success')
+        return redirect(url_for('notice_page'))
+
+    my_notices = list(
+        db.session.execute(
+            db.select(NoticeRequest)
+            .where(NoticeRequest.employee_id == employee.id)
+            .order_by(NoticeRequest.created_at.desc())
+        ).scalars()
+    )
+    return render_template('notice.html', employee=employee, my_notices=my_notices)
+
+
+@app.route('/admin/notice', methods=['GET'])
+@admin_required
+def admin_notice():
+    notices = list(
+        db.session.execute(db.select(NoticeRequest).order_by(NoticeRequest.created_at.desc())).scalars()
+    )
+    return render_template('admin_notice.html', notices=notices)
+
+
+@app.route('/admin/notice/<int:notice_id>/<action>', methods=['POST'])
+@admin_required
+def admin_notice_action(notice_id, action):
+    if action not in ('approve', 'reject'):
+        flash('Invalid action.', 'error')
+        return redirect(url_for('admin_notice'))
+    req = db.session.get(NoticeRequest, notice_id)
+    if not req:
+        flash('Notice request nahi mila.', 'error')
+        return redirect(url_for('admin_notice'))
+    req.status = 'approved' if action == 'approve' else 'rejected'
+    req.admin_id = current_user.id
+    req.reviewed_at = now_ist()
+    req.admin_note = (request.form.get('note') or '').strip()
+    db.session.commit()
+    flash(f'Notice period request {req.status}.', 'success')
+    return redirect(url_for('admin_notice'))
 
 
 # ---------------------------------------------------------------------------

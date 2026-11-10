@@ -104,6 +104,9 @@
                                     <form method="POST" action="{{ url_for('delete_location', loc_id=loc.id) }}" style="display:inline; margin-left:6px;" onsubmit="return confirm('Location delete karna hai?');">
                                         <button class="btn btn-sm btn-outline-purple"><i class="bi bi-trash"></i></button>
                                     </form>
+                                    <button type="button" class="btn btn-sm btn-outline-primary ms-2" onclick="centerMapOnLocation({{ loc.latitude }}, {{ loc.longitude }}, '{{ loc.name | replace(\"'\", \"\\'\") }}')">
+                                        <i class="bi bi-map"></i> Show
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -121,7 +124,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    let map, marker;
+    let map, marker, savedMarkers = [];
     function initMap() {
         const defaultCenter = [28.6139, 77.2090];
         map = L.map('map').setView(defaultCenter, 15);
@@ -145,6 +148,28 @@
             map.panTo(pos);
             fillCoords(pos.lat, pos.lng);
         });
+
+        // Saved locations ke markers aur radius circle dikhayein
+        const locations = {{ locations | tojson }};
+        locations.forEach(loc => {
+            const marker = L.marker([loc.latitude, loc.longitude]).addTo(map);
+            marker.bindPopup(`<b>${loc.name}</b><br>Radius: ${loc.radius_meters} m`);
+            savedMarkers.push(marker);
+
+            // Radius circle
+            L.circle([loc.latitude, loc.longitude], {
+                color: loc.is_active ? '#16a34a' : '#d97706',
+                fillColor: loc.is_active ? '#16a34a' : '#d97706',
+                fillOpacity: 0.15,
+                radius: loc.radius_meters
+            }).addTo(map);
+        });
+
+        // Agar locations hain to pehli location par center karein
+        if (locations.length > 0) {
+            const first = locations[0];
+            map.setView([first.latitude, first.longitude], 16);
+        }
     }
     function fillCoords(lat, lng) {
         document.getElementById('picked_lat').value = lat.toFixed(6);
@@ -154,6 +179,12 @@
     }
 
     document.addEventListener('DOMContentLoaded', initMap);
+
+    function centerMapOnLocation(lat, lng, name) {
+        map.setView([lat, lng], 16);
+        map.closePopup();
+        L.marker([lat, lng]).addTo(map).bindPopup(`<b>${name}</b>`).openPopup();
+    }
 
     function getMyLocation() {
         const btn = document.getElementById('getMyLocationBtn');

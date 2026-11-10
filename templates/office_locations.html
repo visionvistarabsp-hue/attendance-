@@ -42,6 +42,14 @@
                                     <input type="text" class="form-control" id="manual_lng" name="longitude" placeholder="e.g. 77.2090" required>
                                 </div>
                             </div>
+                            <div class="row g-3 mt-3">
+                                <div class="col-12">
+                                    <button type="button" class="btn btn-outline-primary w-100" id="getMyLocationBtn" onclick="getMyLocation()">
+                                        <i class="bi bi-geo-alt-fill me-2"></i> Aapki Location Uthayein (GPS)
+                                    </button>
+                                    <div class="form-text mt-1" id="locationMsg" style="display:none;"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -146,5 +154,46 @@
     }
 
     document.addEventListener('DOMContentLoaded', initMap);
+
+    function getMyLocation() {
+        const btn = document.getElementById('getMyLocationBtn');
+        const msg = document.getElementById('locationMsg');
+        if (!navigator.geolocation) {
+            msg.style.display = 'block';
+            msg.textContent = 'Is browser me location support nahi hai.';
+            msg.className = 'form-text mt-1 text-danger';
+            return;
+        }
+        btn.disabled = true;
+        btn.innerHTML = '<i class="bi bi-arrow-repeat me-2"></i> Location fetch ho rahi hai...';
+        msg.style.display = 'none';
+        navigator.geolocation.getCurrentPosition(
+            (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                document.getElementById('manual_lat').value = lat.toFixed(6);
+                document.getElementById('manual_lng').value = lng.toFixed(6);
+                document.getElementById('picked_lat').value = lat.toFixed(6);
+                document.getElementById('picked_lng').value = lng.toFixed(6);
+                if (marker) {
+                    marker.setLatLng([lat, lng]);
+                    map.panTo([lat, lng]);
+                }
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-geo-alt-fill me-2"></i> Aapki Location Uthayein (GPS)';
+                msg.style.display = 'block';
+                msg.textContent = 'Location mil gayi: ' + lat.toFixed(4) + ', ' + lng.toFixed(4);
+                msg.className = 'form-text mt-1 text-success';
+            },
+            (err) => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-geo-alt-fill me-2"></i> Aapki Location Uthayein (GPS)';
+                msg.style.display = 'block';
+                msg.textContent = 'Location nahi mil paayi. Browser se location permission dein.';
+                msg.className = 'form-text mt-1 text-danger';
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    }
 </script>
 {% endblock %}
